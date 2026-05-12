@@ -1228,7 +1228,7 @@ function attachEvents(){
       }).select().single();if(e2)throw e2;
       await loadMyCrews();
       await enterCrew(grp,mem);
-    }catch(e){S.error='Could not create crew. Please try again.';}
+    }catch(e){console.error('create crew error:',e);S.error='Could not create crew: '+(e?.message||JSON.stringify(e));S.loading=false;render();return;}
     S.loading=false;render();
   });
 

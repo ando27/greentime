@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GreenTime</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#1a6b3c;--green-light:#2d9e5f;--green-pale:#e8f5ee;--green-mid:#c2e8d0;
+  --gold:#c9933a;--gold-light:#f0c97a;--gold-pale:#fef9ec;
+  --red:#c0392b;--red-pale:#fdecea;
+  --blue:#1a5fa8;--blue-pale:#e8f0fb;
+  --bg:#f5f2eb;--card:#ffffff;--border:#d8d2c4;
+  --text:#1c1c1a;--muted:#6b6b5e;--subtle:#a0a090;
+  --radius:14px;--shadow:0 2px 16px rgba(0,0,0,0.08);
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#141410;--card:#1e1e18;--border:#2e2e26;
+    --text:#ede8dc;--muted:#8a8a7a;--subtle:#5a5a4e;
+    --green:#2d9e5f;--green-pale:#0d2619;--green-mid:#0d3320;--green-light:#3dbf75;
+    --gold-pale:#2a1e00;--red-pale:#2a0d0d;--blue-pale:#0d1e35;--blue:#4a8fd4;
+  }
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+#app{max-width:520px;margin:0 auto;padding:24px 16px 80px}
+
+.header{text-align:center;padding:28px 0 20px}
+.logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:6px}
+.logo-icon{width:36px;height:36px;background:var(--green);border-radius:9px;display:flex;align-items:center;justify-content:center}
+.logo-icon svg{width:19px;height:19px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.logo-text{font-family:'Playfair Display',serif;font-size:23px;color:var(--text)}
+.tagline{color:var(--muted);font-size:12px}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:13px;box-shadow:var(--shadow)}
+.card-title{font-size:14px;font-weight:600;margin-bottom:13px;display:flex;align-items:center;gap:8px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.dot-gold{background:var(--gold)}
+.dot-red{background:var(--red)}
+.dot-blue{background:var(--blue)}
+
+input[type=text],input[type=email],input[type=date],input[type=time],input[type=number]{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);outline:none;transition:border-color .2s}
+input:focus{border-color:var(--green)}
+.input-group{margin-bottom:12px}
+.input-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+label{display:block;font-size:12px;font-weight:500;margin-bottom:5px;color:var(--muted)}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:11px 18px;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:var(--green);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--green-light)}
+.btn-secondary{background:transparent;color:var(--text);border:1.5px solid var(--border)}
+.btn-secondary:hover:not(:disabled){border-color:var(--green);color:var(--green)}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-blue:hover:not(:disabled){opacity:.9}
+.btn-danger{background:transparent;color:var(--red);border:1.5px solid var(--red)}
+.btn-danger:hover:not(:disabled){background:var(--red-pale)}
+.btn-sm{padding:6px 12px;font-size:12px;width:auto}
+.btn-ghost{background:transparent;color:var(--muted);border:none;font-size:12px;text-decoration:underline;cursor:pointer;width:auto;padding:3px 0}
+
+.divider{display:flex;align-items:center;gap:12px;margin:14px 0;color:var(--subtle);font-size:12px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.tabs{display:flex;gap:3px;background:var(--border);padding:3px;border-radius:9px;margin-bottom:16px}
+.tab{flex:1;padding:7px 3px;text-align:center;border-radius:7px;font-size:11px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s;border:none;background:transparent;white-space:nowrap}
+.tab.active{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0}
+.avatar-sm{width:26px;height:26px;font-size:11px}
+.avatar-lg{width:48px;height:48px;font-size:16px}
+.member-row{display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--green-pale);border-radius:9px}
+.member-name{font-size:13px;font-weight:500}
+.member-sub{font-size:11px;color:var(--muted)}
+.badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;background:var(--gold-light);color:#7a5010;margin-left:auto}
+.badge-red{background:var(--red-pale);color:var(--red)}
+.badge-blue{background:var(--blue-pale);color:var(--blue)}
+.badge-green{background:var(--green-pale);color:var(--green)}
+@media(prefers-color-scheme:dark){.badge{background:#3d2a00;color:#f0c97a}}
+
+.share-box{background:var(--green-pale);border:1.5px dashed var(--green);border-radius:9px;padding:13px 15px;margin-top:9px}
+.share-code{font-family:monospace;font-size:19px;font-weight:700;letter-spacing:3px;color:var(--green)}
+.share-url{font-size:11px;color:var(--muted);word-break:break-all;margin-top:4px;font-family:monospace}
+.copied-msg{color:var(--green);font-size:11px;font-weight:600;opacity:0;transition:opacity .3s;margin-top:5px;height:14px}
+.copied-msg.show{opacity:1}
+
+.banner{padding:10px 13px;border-radius:9px;font-size:13px;margin-bottom:12px;font-weight:500}
+.banner-error{background:var(--red-pale);color:var(--red);border:1px solid var(--red)}
+.banner-info{background:var(--blue-pale);color:var(--blue);border:1px solid var(--blue)}
+.banner-success{background:var(--green-pale);color:var(--green);border:1px solid var(--green)}
+
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+.spinner-dark{border-color:rgba(0,0,0,.12);border-top-color:var(--green)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .2s ease}
+
+/* ── Auth screens ─────────────────────────────────────────────────────── */
+.auth-wrap{max-width:360px;margin:0 auto;padding-top:20px}
+.auth-hero{text-align:center;margin-bottom:28px}
+.auth-hero-icon{width:64px;height:64px;background:var(--green);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.auth-hero-icon svg{width:32px;height:32px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.auth-title{font-family:'Playfair Display',serif;font-size:26px;margin-bottom:6px}
+.auth-sub{font-size:13px;color:var(--muted)}
+.auth-mode-toggle{display:flex;gap:4px;font-size:12px;color:var(--muted);justify-content:center;margin-top:12px}
+
+/* ── Crew list (home for logged-in users) ─────────────────────────────── */
+.crew-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;box-shadow:var(--shadow);display:flex;align-items:center;gap:13px;cursor:pointer;transition:all .15s}
+.crew-card:hover{border-color:var(--green);transform:translateY(-1px)}
+.crew-icon{width:42px;height:42px;background:var(--green-pale);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.crew-name{font-size:15px;font-weight:600}
+.crew-meta{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* ── Profile header bar (inside a crew) ──────────────────────────────── */
+.crew-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;box-shadow:var(--shadow)}
+.crew-bar-name{font-size:13px;font-weight:600;flex:1}
+.crew-bar-sub{font-size:11px;color:var(--muted)}
+.crew-switcher-btn{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;border:1.5px solid var(--border);background:transparent;font-size:12px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
+.crew-switcher-btn:hover{border-color:var(--green);color:var(--green)}
+
+/* ── Profile settings panel ──────────────────────────────────────────── */
+.profile-section{margin-bottom:18px}
+.profile-section-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+
+/* ── Events ───────────────────────────────────────────────────────────── */
+.event-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.event-course{font-size:15px;font-weight:600}
+.event-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.pill-green{background:var(--green-pale);color:var(--green)}
+.pill-red{background:var(--red-pale);color:var(--red)}
+.pill-gray{background:var(--border);color:var(--muted)}
+.pill-blue{background:var(--blue-pale);color:var(--blue)}
+.rsvp-row{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.rsvp-avatar-wrap{display:flex;flex-wrap:wrap;gap:4px;flex:1}
+.rsvp-actions{display:flex;gap:6px}
+.btn-in{background:var(--green);color:#fff;border:none}
+.btn-in:hover{background:var(--green-light)}
+.btn-out{background:transparent;color:var(--red);border:1.5px solid var(--red)}
+.btn-out:hover{background:var(--red-pale)}
+.btn-in-active{background:var(--green);color:#fff;border:none}
+.btn-out-active{background:var(--red-pale);color:var(--red);border:1.5px solid var(--red)}
+.spots-bar{height:5px;background:var(--border);border-radius:3px;margin-top:8px;overflow:hidden}
+.spots-fill{height:100%;background:var(--green);border-radius:3px;transition:width .3s}
+
+/* ── Bail log ─────────────────────────────────────────────────────────── */
+.bail-card{background:var(--red-pale);border:1px solid var(--red);border-radius:11px;padding:14px 16px;margin-bottom:10px}
+.bail-name{font-size:14px;font-weight:600;color:var(--red)}
+.pay-links{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.pay-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;border:1.5px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;transition:all .15s}
+.pay-btn:hover{border-color:var(--green);color:var(--green)}
+
+/* ── Courses ──────────────────────────────────────────────────────────── */
+.course-subtabs{display:flex;gap:6px;margin-bottom:14px}
+.course-subtab{flex:1;padding:8px 6px;border-radius:9px;border:1.5px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;background:var(--card);color:var(--muted);transition:all .15s;text-align:center}
+.course-subtab.active{background:var(--green);border-color:var(--green);color:#fff}
+.course-subtab.active-blue{background:var(--blue);border-color:var(--blue);color:#fff}
+.radius-pills{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.radius-pill{padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;font-weight:500;cursor:pointer;background:var(--card);color:var(--muted);transition:all .15s}
+.radius-pill.active{background:var(--green);border-color:var(--green);color:#fff}
+.course-card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow)}
+.course-name{font-size:14px;font-weight:600;margin-bottom:2px}
+.course-meta{font-size:12px;color:var(--muted)}
+.course-actions{display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap}
+.fav-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--muted);transition:all .15s}
+.fav-btn:hover{border-color:var(--gold);color:var(--gold)}
+.fav-btn.favorited{background:var(--gold-pale);border-color:var(--gold);color:var(--gold)}
+.dir-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--muted);text-decoration:none;transition:all .15s}
+.dir-btn:hover{border-color:var(--green);color:var(--green)}
+.fav-course-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.fav-course-row:last-child{border-bottom:none}
+
+/* ── MITM ─────────────────────────────────────────────────────────────── */
+.mitm-header{background:var(--blue-pale);border:1px solid var(--blue);border-radius:11px;padding:14px 16px;margin-bottom:13px}
+.mitm-title{font-size:14px;font-weight:600;color:var(--blue);margin-bottom:4px}
+.mitm-sub{font-size:12px;color:var(--muted)}
+.mitm-midpoint{font-size:13px;font-weight:600;color:var(--blue);margin-top:8px}
+.algo-toggle{display:flex;gap:6px;margin-bottom:14px}
+.algo-btn{flex:1;padding:9px 8px;border-radius:9px;border:1.5px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;background:var(--card);color:var(--muted);transition:all .15s;text-align:center}
+.algo-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.member-dist-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px}
+.member-dist-bar-wrap{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.member-dist-bar{height:100%;border-radius:3px;background:var(--blue);transition:width .4s}
+.member-dist-label{font-size:11px;color:var(--muted);min-width:44px;text-align:right}
+.loc-status{display:flex;align-items:center;gap:8px;padding:10px 13px;border-radius:9px;font-size:12px;margin-bottom:12px}
+.loc-status-green{background:var(--green-pale);color:var(--green)}
+
+/* ── Calendar ─────────────────────────────────────────────────────────── */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-month{font-size:14px;font-weight:600}
+.cal-nav{background:none;border:1.5px solid var(--border);border-radius:7px;width:28px;height:28px;cursor:pointer;color:var(--text);font-size:15px;display:flex;align-items:center;justify-content:center}
+.cal-nav:hover{border-color:var(--green);color:var(--green)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-dow{text-align:center;font-size:10px;font-weight:600;color:var(--muted);padding:3px 0;text-transform:uppercase}
+.cal-day{aspect-ratio:1;border-radius:7px;border:1.5px solid var(--border);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;min-width:0}
+.cal-day:hover:not(.cal-past):not(.cal-empty){border-color:var(--green);background:var(--green-pale)}
+.cal-day.cal-past{opacity:.3;cursor:not-allowed}
+.cal-day.cal-empty{border-color:transparent;background:transparent;cursor:default}
+.cal-day.cal-today{border-color:var(--green);font-weight:600}
+.cal-day.cal-selected{background:var(--green);border-color:var(--green);color:#fff}
+.cal-day-num{font-size:12px;font-weight:500;line-height:1}
+.cal-dots{display:flex;gap:2px;margin-top:2px}
+.cal-dot{width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.7)}
+.tod-picker{background:var(--green-pale);border:1px solid var(--green-mid);border-radius:9px;padding:11px 13px;margin-top:8px}
+.tod-label{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:.5px}
+.tod-options{display:flex;gap:7px}
+.tod-btn{flex:1;padding:7px 5px;border-radius:7px;border:1.5px solid var(--border);background:var(--card);font-size:11px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s;text-align:center}
+.tod-btn:hover{border-color:var(--green);color:var(--green)}
+.tod-btn.active{background:var(--green);border-color:var(--green);color:#fff}
+.overlap-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:3px}
+.overlap-dow{text-align:center;font-size:10px;font-weight:600;color:var(--muted);padding:3px 0;text-transform:uppercase}
+.overlap-day{aspect-ratio:1;border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:600;min-width:0;border:1.5px solid transparent}
+.overlap-day.empty{background:transparent;}
+.overlap-day.past{opacity:.3;}
+.overlap-num{font-size:11px;font-weight:600;line-height:1}
+.overlap-count{font-size:9px;margin-top:1px;font-weight:400}
+.heat-0{background:var(--card);border-color:var(--border);color:var(--subtle)}
+.heat-1{background:#d4edda;border-color:#a8d5b5;color:#1a5c30}
+.heat-2{background:#8ecfa0;border-color:#5eaf75;color:#0d3d1e}
+.heat-3{background:#3dab5e;border-color:#2a8a47;color:#fff}
+.heat-4{background:#1a6b3c;border-color:#0f4a28;color:#fff}
+@media(prefers-color-scheme:dark){
+  .heat-1{background:#0d2e18;border-color:#1a4d28;color:#6ecf8e}
+  .heat-2{background:#0f3d20;border-color:#1e6635;color:#8edfa8}
+  .heat-3{background:#1a6b3c;border-color:#2a9e5a;color:#fff}
+  .heat-4{background:#2d9e5f;border-color:#3dbf75;color:#fff}
+}
+.legend{display:flex;align-items:center;gap:7px;margin-top:8px;flex-wrap:wrap}
+.legend-label{font-size:10px;color:var(--muted)}
+.legend-swatch{width:12px;height:12px;border-radius:3px}
+</style>
+</head>
+<body>
+<div id="app"><div style="text-align:center;padding:80px 20px"><div class="spinner spinner-dark" style="margin:0 auto 12px"></div><div style="font-size:13px;color:var(--muted)">Loading…</div></div></div>
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// GreenTime — Phase 5: User Profiles + Magic Link Auth
+// Version: 5.0.1
+// Last updated: 2026-04-05
+//
+// CHANGELOG
+// v5.0.0 (2026-04-05)
+//   - Added magic link authentication via Supabase Auth
+//   - New screens: login (email entry), check-email, setup-profile (first login)
+//   - Guest/anonymous mode fully preserved — "Continue as guest" path unchanged
+//   - Authenticated users get a crew list home screen showing all groups
+//     they are a member of across any number of groups
+//   - user_profiles table: display name + home location stored once,
+//     applies across all crews (location no longer needs to be set per-group)
+//   - Crew bar shows active crew name + member count at top of group view
+//     with a "Switch Crew" button for multi-group navigation
+//   - Profile tab: view/edit display name and home location
+//   - members.user_id linked on join for authenticated users
+//   - Anonymous member rows still work (user_id = null)
+//   - Session managed by Supabase (1-week expiry, auto-refresh)
+//   - Carried forward: all Phase 4.5 features + B-01 bail dedup fix
+//
+// v5.0.1 (2026-04-05)
+//   - Fix: Profile button on crew list was setting S.screen to "profile-settings"
+//     which caused crewListHTML() to not render at all, resulting in a blank screen.
+//     Replaced screen-based toggle with a dedicated S.showProfile boolean flag.
+//     Profile panel now renders inline within the crew list view as intended.
+//
+// AUTH FLOW:
+//   Authenticated: login → magic link email → tap link → setup (first time)
+//                  → crew list → tap crew → group view
+//   Guest:         tap "Continue as guest" → enter name → join by code
+//                  → group view (same as before)
+//
+// KNOWN LIMITATIONS (future):
+//   - Magic link redirect URL must be updated in Supabase when deployed to Vercel
+//   - Anonymous members can't yet "claim" their rows by signing in later
+//   - No push notifications yet (Phase 6)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const { createClient } = supabase;
+const sb = createClient(
+  'https://fhflxafuvnvafkhwniiz.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoZmx4YWZ1dm52YWZraHduaWl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNDQ3MjIsImV4cCI6MjA5MDgyMDcyMn0.E3e-HpSRmxM9sy2RzYmet1qbTJOXRvsDIoGqjKLFKKk'
+);
+
+// ── State ────────────────────────────────────────────────────────────────────
+let S = {
+  // Auth
+  screen: 'loading',      // loading | login | check-email | setup-profile |
+                          // crew-list | join-guest | group
+  authUser: null,         // Supabase auth user object (null if guest)
+  userProfile: null,      // user_profiles row
+  isGuest: false,         // true if using anonymous/guest mode
+
+  // Crew list (authenticated users)
+  myCrews: [],            // [{ group, member }] — all crews for this user
+
+  // Active group (same structure as before)
+  group: null, members: [], currentMember: null,
+  activeTab: 'events',
+
+  // Events
+  events: [], rsvps: [], bails: [],
+  showCreateEvent: false,
+
+  // Availability
+  myAvailability: [], groupAvailability: [],
+  calOffset: 0, selectedDate: null,
+
+  // Courses
+  courseSubTab: 'nearby',
+  searchRadius: 10,
+  nearbyCourses: [], courseLoading: false, courseError: null,
+  userLat: null, userLng: null, locationError: null,
+
+  // MITM
+  mitmAlgo: 'centroid',
+  mitmCourses: [], mitmLoading: false, mitmError: null,
+  mitmMidpoint: null, mitmMidpointMinimax: null,
+
+  // Location input
+  showLocInput: false, locInputError: null,
+
+  // UI
+  loading: false, error: null,
+};
+
+// ── Supabase auth listener ────────────────────────────────────────────────────
+// This fires on page load (restores session) and on magic link callback
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' && session) {
+    S.authUser = session.user;
+    S.isGuest  = false;
+    // Check if profile exists
+    const { data: profile } = await sb.from('user_profiles')
+      .select('*').eq('id', session.user.id).single();
+    if (profile) {
+      S.userProfile = profile;
+      await loadMyCrews();
+      S.screen = S.myCrews.length > 0 ? 'crew-list' : 'crew-list';
+    } else {
+      // First login — need to set up profile
+      S.screen = 'setup-profile';
+    }
+    S.loading = false;
+    render();
+  } else if (event === 'SIGNED_OUT') {
+    S.authUser = null; S.userProfile = null;
+    S.isGuest  = false; S.screen = 'login';
+    S.loading  = false;
+    render();
+  } else if (event === 'INITIAL_SESSION') {
+    // No active session — check if guest session exists
+    const guestSession = JSON.parse(localStorage.getItem('gt_guest_v3') || 'null');
+    if (guestSession?.groupId && guestSession?.memberId) {
+      await restoreGuestSession(guestSession);
+    } else {
+      S.screen = 'login';
+    }
+    S.loading = false;
+    render();
+  }
+});
+
+// ── Guest session ─────────────────────────────────────────────────────────────
+async function restoreGuestSession(sess) {
+  try {
+    const [{ data: grp }, { data: members }] = await Promise.all([
+      sb.from('groups').select('*').eq('id', sess.groupId).single(),
+      sb.from('members').select('*').eq('group_id', sess.groupId)
+    ]);
+    if (!grp) { clearGuestSession(); return; }
+    S.group = grp; S.members = members || [];
+    S.currentMember = members?.find(m => m.id === sess.memberId) || null;
+    if (!S.currentMember) { clearGuestSession(); return; }
+    S.isGuest = true; S.screen = 'group';
+    await loadAll();
+  } catch(e) { clearGuestSession(); }
+}
+
+function saveGuestSession() {
+  if (S.group && S.currentMember)
+    localStorage.setItem('gt_guest_v3', JSON.stringify({
+      groupId: S.group.id, memberId: S.currentMember.id
+    }));
+}
+
+function clearGuestSession() {
+  localStorage.removeItem('gt_guest_v3');
+}
+
+// ── Crew list loader (authenticated) ─────────────────────────────────────────
+async function loadMyCrews() {
+  const { data: memberRows } = await sb.from('members')
+    .select('*, groups(*)')
+    .eq('user_id', S.authUser.id);
+  S.myCrews = (memberRows || []).map(m => ({
+    group: m.groups,
+    member: m
+  })).filter(c => c.group);
+}
+
+// ── Enter a specific crew ─────────────────────────────────────────────────────
+async function enterCrew(group, member) {
+  S.group = group; S.currentMember = member;
+  S.screen = 'group'; S.activeTab = 'events';
+  S.loading = true; render();
+  const { data: members } = await sb.from('members').select('*').eq('group_id', group.id);
+  S.members = members || [];
+  await loadAll();
+  S.loading = false; render();
+}
+
+// ── Data loaders ──────────────────────────────────────────────────────────────
+async function loadAll() { await Promise.all([loadEvents(), loadAvailability()]); }
+
+async function loadEvents() {
+  const gid = S.group.id;
+  const [{ data: events },{ data: rsvps },{ data: bails }] = await Promise.all([
+    sb.from('events').select('*').eq('group_id',gid).order('event_date',{ascending:true}),
+    sb.from('rsvps').select('*').eq('group_id',gid),
+    sb.from('bail_log').select('*').eq('group_id',gid).order('bailed_at',{ascending:false})
+  ]);
+  S.events=events||[]; S.rsvps=rsvps||[]; S.bails=bails||[];
+}
+
+async function loadAvailability() {
+  const { data } = await sb.from('availability').select('*').eq('group_id',S.group.id);
+  S.groupAvailability = data||[];
+  S.myAvailability = S.groupAvailability.filter(r=>r.member_id===S.currentMember.id);
+}
+
+async function refreshGroup() {
+  const { data } = await sb.from('groups').select('*').eq('id',S.group.id).single();
+  if (data) S.group = data;
+}
+
+async function refreshMembers() {
+  const { data } = await sb.from('members').select('*').eq('group_id',S.group.id);
+  if (data) {
+    S.members = data;
+    S.currentMember = data.find(m=>m.id===S.currentMember.id) || S.currentMember;
+  }
+}
+
+// ── Location helpers ──────────────────────────────────────────────────────────
+async function reverseGeocode(lat, lng) {
+  try {
+    const resp = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+      { headers: { 'Accept-Language': 'en' } }
+    );
+    const data = await resp.json();
+    const addr = data.address || {};
+    return [addr.city||addr.town||addr.village||addr.county, addr.state]
+      .filter(Boolean).join(', ') || 'Your location';
+  } catch(e) { return `${lat.toFixed(2)}°N, ${Math.abs(lng).toFixed(2)}°W`; }
+}
+
+// Save location — to user_profile if authenticated, to member row if guest
+async function saveLocation(lat, lng, label) {
+  if (S.authUser && S.userProfile) {
+    await sb.from('user_profiles')
+      .update({ home_lat: lat, home_lng: lng, home_label: label })
+      .eq('id', S.authUser.id);
+    S.userProfile = { ...S.userProfile, home_lat: lat, home_lng: lng, home_label: label };
+  }
+  // Always update member row too (used for MITM calc in current group)
+  await sb.from('members')
+    .update({ home_lat: lat, home_lng: lng, home_label: label })
+    .eq('id', S.currentMember.id);
+  await refreshMembers();
+}
+
+// ── Effective location for current user ──────────────────────────────────────
+// Prefers profile location, falls back to member row location
+function myLocation() {
+  if (S.authUser && S.userProfile?.home_lat)
+    return { lat: S.userProfile.home_lat, lng: S.userProfile.home_lng, label: S.userProfile.home_label };
+  if (S.currentMember?.home_lat)
+    return { lat: S.currentMember.home_lat, lng: S.currentMember.home_lng, label: S.currentMember.home_label };
+  return null;
+}
+
+// ── Course search ─────────────────────────────────────────────────────────────
+async function searchNearbyCourses(lat, lng, radiusMiles) {
+  const radiusMeters = radiusMiles * 1609.34;
+  const query = `[out:json][timeout:25];(node["leisure"="golf_course"](around:${radiusMeters},${lat},${lng});way["leisure"="golf_course"](around:${radiusMeters},${lat},${lng});relation["leisure"="golf_course"](around:${radiusMeters},${lat},${lng}););out center tags;`;
+  const resp = await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:query});
+  if (!resp.ok) throw new Error('Overpass error');
+  const data = await resp.json();
+  return data.elements.map(el=>{
+    const elat=el.lat??el.center?.lat, elng=el.lon??el.center?.lon;
+    if(!elat||!elng) return null;
+    const name=el.tags?.name||'Golf Course';
+    const city=el.tags?.['addr:city']||el.tags?.['addr:suburb']||'';
+    const state=el.tags?.['addr:state']||'';
+    const address=[city,state].filter(Boolean).join(', ')||'Address not listed';
+    return{id:`osm_${el.type}_${el.id}`,name,address,lat:elat,lng:elng,dist:haversine(lat,lng,elat,elng)};
+  }).filter(Boolean).sort((a,b)=>a.dist-b.dist).slice(0,25);
+}
+
+// ── MITM algorithms ───────────────────────────────────────────────────────────
+function membersWithLocation() {
+  return S.members.filter(m=>m.home_lat!=null&&m.home_lng!=null);
+}
+function calcCentroid(lm) {
+  return { lat:lm.reduce((s,m)=>s+m.home_lat,0)/lm.length, lng:lm.reduce((s,m)=>s+m.home_lng,0)/lm.length };
+}
+function calcMinimax(lm) {
+  let pt=calcCentroid(lm), step=0.1;
+  for(let i=0;i<500&&step>0.0001;i++){
+    const dists=lm.map(m=>haversine(pt.lat,pt.lng,m.home_lat,m.home_lng));
+    const max=Math.max(...dists), victim=lm[dists.indexOf(max)];
+    const dLat=victim.home_lat-pt.lat, dLng=victim.home_lng-pt.lng;
+    const mag=Math.sqrt(dLat*dLat+dLng*dLng)||1;
+    const cand={lat:pt.lat+(dLat/mag)*step, lng:pt.lng+(dLng/mag)*step};
+    const newMax=Math.max(...lm.map(m=>haversine(cand.lat,cand.lng,m.home_lat,m.home_lng)));
+    if(newMax<max){pt=cand;}else{step*=0.5;}
+  }
+  return pt;
+}
+async function runMitmSearch() {
+  const lm=membersWithLocation();
+  if(lm.length<2) return;
+  S.mitmLoading=true; S.mitmError=null; render();
+  try{
+    const pt=S.mitmAlgo==='minimax'?calcMinimax(lm):calcCentroid(lm);
+    const label=await reverseGeocode(pt.lat,pt.lng);
+    if(S.mitmAlgo==='minimax'){S.mitmMidpointMinimax={...pt,label};}
+    else{S.mitmMidpoint={...pt,label};}
+    S.mitmCourses=await searchNearbyCourses(pt.lat,pt.lng,S.searchRadius);
+  }catch(e){S.mitmError='Could not complete search. Check your connection.';}
+  S.mitmLoading=false; render();
+}
+
+// ── Favorites ─────────────────────────────────────────────────────────────────
+function getFavorites(){return S.group?.favorite_courses||[];}
+function isFavorited(id){return getFavorites().some(c=>c.id===id);}
+async function toggleFavorite(course){
+  const favs=getFavorites(), exists=favs.some(c=>c.id===course.id);
+  const updated=exists?favs.filter(c=>c.id!==course.id):[...favs,{id:course.id,name:course.name,address:course.address,lat:course.lat,lng:course.lng}];
+  await sb.from('groups').update({favorite_courses:updated}).eq('id',S.group.id);
+  await refreshGroup(); render();
+}
+
+// ── Misc helpers ──────────────────────────────────────────────────────────────
+function haversine(a,b,c,d){const R=3958.8,dL=(c-a)*Math.PI/180,dl=(d-b)*Math.PI/180,x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dl/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+function mapsLink(lat,lng,name){return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&query=${lat},${lng}`;}
+function genCode(){return Math.random().toString(36).substring(2,8).toUpperCase();}
+function initials(name){return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
+function toYMD(d){return d.toISOString().split('T')[0];}
+function todayYMD(){return toYMD(new Date());}
+function fmtDate(ymd){const[y,m,d]=ymd.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}
+function fmtTime(t){const[h,m]=t.split(':').map(Number);return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;}
+function myRsvp(eid){return S.rsvps.find(r=>r.event_id===eid&&r.member_id===S.currentMember?.id);}
+function memberById(id){return S.members.find(m=>m.id===id);}
+function bailCount(mid){return S.bails.filter(b=>b.member_id===mid).length;}
+function isBailWindow(ev,rsvp){if(!rsvp?.confirmed_at)return false;return(new Date(`${ev.event_date}T${ev.tee_time}`)-new Date())/1000/3600<=ev.cutoff_hours;}
+function venmoLink(a,n){return `venmo://paycharge?txn=charge&amount=${a}&note=${encodeURIComponent(n)}`;}
+function cashappLink(a,n){return `https://cash.app/pay?amount=${a}&note=${encodeURIComponent(n)}`;}
+function q(sel){return document.querySelector(sel);}
+function showCopied(){const el=document.getElementById('copied-msg');if(el){el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2000);}}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render(){document.getElementById('app').innerHTML=html();attachEvents();}
+
+function html(){
+  if(S.screen==='loading') return `<div style="text-align:center;padding:80px 20px"><div class="spinner spinner-dark" style="margin:0 auto 12px"></div><div style="font-size:13px;color:var(--muted)">Loading…</div></div>`;
+  return `
+    <div class="header">
+      <div class="logo"><div class="logo-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 3"/></svg></div>
+      <span class="logo-text">GreenTime</span></div>
+      <div class="tagline">Find when your crew can play</div>
+    </div>
+    ${S.screen==='login'         ? loginHTML()        : ''}
+    ${S.screen==='check-email'   ? checkEmailHTML()   : ''}
+    ${S.screen==='setup-profile' ? setupProfileHTML() : ''}
+    ${S.screen==='crew-list'     ? crewListHTML()     : ''}
+    ${S.screen==='join-guest'    ? joinGuestHTML()    : ''}
+    ${S.screen==='create-group'  ? createGroupHTML()  : ''}
+    ${S.screen==='join-group'    ? joinGroupHTML()    : ''}
+    ${S.screen==='group'         ? groupHTML()        : ''}
+  `;}
+
+// ── Screen: Login ─────────────────────────────────────────────────────────────
+function loginHTML(){return `
+  <div class="auth-wrap fade-in">
+    <div class="auth-hero">
+      <div class="auth-hero-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 3"/></svg></div>
+      <div class="auth-title">Welcome to GreenTime</div>
+      <div class="auth-sub">Sign in to manage multiple crews and keep your settings across devices.</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Sign in with email</div>
+      <div class="input-group">
+        <label>Email address</label>
+        <input id="auth-email" type="email" placeholder="you@example.com"/>
+      </div>
+      ${S.error?`<div class="banner banner-error">${S.error}</div>`:''}
+      <button class="btn btn-primary" id="send-magic-link" ${S.loading?'disabled':''}>
+        ${S.loading?'<span class="spinner"></span> Sending…':'✉️ Send Magic Link'}
+      </button>
+    </div>
+    <div class="divider">or</div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--subtle)"></span>Continue as guest</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:13px">Join a single group by invite code. No account needed — settings won't persist across devices.</p>
+      <button class="btn btn-secondary" id="go-guest">Continue as Guest →</button>
+    </div>
+  </div>`;}
+
+// ── Screen: Check email ───────────────────────────────────────────────────────
+function checkEmailHTML(){return `
+  <div class="auth-wrap fade-in" style="text-align:center">
+    <div style="font-size:48px;margin-bottom:16px">📬</div>
+    <div class="auth-title" style="margin-bottom:8px">Check your email</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:24px">
+      We sent a magic link to <strong>${S._sentEmail||'your email'}</strong>.<br/>
+      Tap the link in the email to sign in — it expires in 1 hour.
+    </p>
+    <div class="banner banner-info" style="text-align:left">
+      Can't find it? Check your spam folder. The email comes from your Supabase project address.
+    </div>
+    <button class="btn btn-ghost" id="back-to-login" style="margin-top:16px">← Use a different email</button>
+  </div>`;}
+
+// ── Screen: Setup profile (first login) ───────────────────────────────────────
+function setupProfileHTML(){return `
+  <div class="auth-wrap fade-in">
+    <div class="auth-hero" style="margin-bottom:20px">
+      <div style="font-size:36px;margin-bottom:10px">👋</div>
+      <div class="auth-title">One last thing</div>
+      <div class="auth-sub">Set your display name so your crew knows who you are.</div>
+    </div>
+    <div class="card">
+      <div class="input-group">
+        <label>Your name</label>
+        <input id="setup-name" type="text" placeholder="e.g. Justin A." maxlength="30"/>
+      </div>
+      ${S.error?`<div class="banner banner-error">${S.error}</div>`:''}
+      <button class="btn btn-primary" id="do-setup-profile" ${S.loading?'disabled':''}>
+        ${S.loading?'<span class="spinner"></span> Saving…':'Get Started →'}
+      </button>
+    </div>
+  </div>`;}
+
+// ── Screen: Crew list ─────────────────────────────────────────────────────────
+function crewListHTML(){
+  const profile = S.userProfile;
+  return `<div class="fade-in">
+    <!-- Profile bar -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <div class="avatar avatar-lg">${initials(profile?.display_name||'?')}</div>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:600">${profile?.display_name||'—'}</div>
+        <div style="font-size:12px;color:var(--muted)">${S.authUser?.email||''}</div>
+        ${profile?.home_label?`<div style="font-size:11px;color:var(--green)">📍 ${profile.home_label}</div>`:''}
+      </div>
+      <button class="btn btn-secondary btn-sm" id="go-profile-settings">Profile</button>
+      <button class="btn btn-ghost" id="sign-out" style="font-size:12px">Sign out</button>
+    </div>
+
+    <!-- Crews -->
+    <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Your Crews (${S.myCrews.length})</div>
+    ${S.myCrews.length===0?`
+      <div class="card" style="text-align:center;padding:28px">
+        <div style="font-size:28px;margin-bottom:8px">⛳</div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:6px">No crews yet</div>
+        <p style="font-size:12px;color:var(--muted)">Create a new crew or join one with an invite code.</p>
+      </div>`
+    :S.myCrews.map(({group,member})=>`
+      <div class="crew-card" data-group-id="${group.id}">
+        <div class="crew-icon">⛳</div>
+        <div style="flex:1;min-width:0">
+          <div class="crew-name">${group.name}</div>
+          <div class="crew-meta">Code: ${group.invite_code}</div>
+        </div>
+        ${member.is_admin?'<span class="badge">Admin</span>':''}
+      </div>`).join('')}
+
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn btn-primary" id="create-crew-auth" style="flex:1">+ New Crew</button>
+      <button class="btn btn-secondary" id="join-crew-auth" style="flex:1">Join by Code</button>
+    </div>
+
+    ${S.showProfile?profileSettingsHTML():''}
+  </div>`;}
+
+// ── Profile settings panel ────────────────────────────────────────────────────
+function profileSettingsHTML(){
+  const p=S.userProfile;
+  return `<div class="card" style="margin-top:14px">
+    <div class="card-title"><span class="dot"></span>Profile settings</div>
+    <div class="profile-section">
+      <div class="profile-section-title">Display name</div>
+      <div style="display:flex;gap:8px">
+        <input id="profile-name" type="text" value="${p?.display_name||''}" maxlength="30" style="flex:1"/>
+        <button class="btn btn-primary btn-sm" id="save-profile-name">Save</button>
+      </div>
+    </div>
+    <div class="profile-section">
+      <div class="profile-section-title">Home location</div>
+      ${p?.home_label?`<div class="loc-status loc-status-green" style="margin-bottom:8px">📍 ${p.home_label}</div>`:''}
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="profile-loc-text" type="text" placeholder="e.g. Hoboken, NJ" style="flex:1" value="${p?.home_label||''}"/>
+        <button class="btn btn-primary btn-sm" id="save-profile-loc-text">Save</button>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="save-profile-loc-gps">📍 Use GPS</button>
+      ${S.locInputError?`<div style="font-size:12px;color:var(--red);margin-top:6px">${S.locInputError}</div>`:''}
+    </div>
+    <button class="btn btn-ghost" id="close-profile-settings">Close</button>
+  </div>`;}
+
+// ── Screen: Join as guest ─────────────────────────────────────────────────────
+function joinGuestHTML(){
+  const pre=(location.hash.replace('#join=','')||'').toUpperCase();
+  return `<div class="fade-in">
+    <button class="btn btn-ghost" id="back-to-login">← Back</button>
+    <div class="card" style="margin-top:11px">
+      <div class="card-title"><span class="dot"></span>Join as guest</div>
+      <div class="input-group"><label>Invite code</label>
+        <input id="join-code" type="text" placeholder="AB3X7Z" maxlength="6" value="${pre}" style="text-transform:uppercase;letter-spacing:3px;font-weight:600;font-size:16px"/>
+      </div>
+      <div class="input-group"><label>Your name</label>
+        <input id="join-name" type="text" placeholder="e.g. Mike D." maxlength="30"/>
+      </div>
+      ${S.error?`<div class="banner banner-error">${S.error}</div>`:''}
+      <button class="btn btn-primary" id="do-join-guest" ${S.loading?'disabled':''}>
+        ${S.loading?'<span class="spinner"></span> Joining…':'Join Group'}
+      </button>
+    </div>
+  </div>`;}
+
+// ── Screen: Create group (auth) ───────────────────────────────────────────────
+function createGroupHTML(){return `<div class="fade-in">
+  <button class="btn btn-ghost" id="back-to-crews">← Back to crews</button>
+  <div class="card" style="margin-top:11px">
+    <div class="card-title"><span class="dot"></span>Create a new crew</div>
+    <div class="input-group"><label>Crew name</label>
+      <input id="grp-name" type="text" placeholder="e.g. Weekend Hackers" maxlength="40"/>
+    </div>
+    ${S.error?`<div class="banner banner-error">${S.error}</div>`:''}
+    <button class="btn btn-primary" id="do-create-group" ${S.loading?'disabled':''}>
+      ${S.loading?'<span class="spinner"></span> Creating…':'Create Crew & Get Link'}
+    </button>
+  </div>
+</div>`;}
+
+// ── Screen: Join group (auth) ─────────────────────────────────────────────────
+function joinGroupHTML(){
+  const pre=(location.hash.replace('#join=','')||'').toUpperCase();
+  return `<div class="fade-in">
+  <button class="btn btn-ghost" id="back-to-crews">← Back to crews</button>
+  <div class="card" style="margin-top:11px">
+    <div class="card-title"><span class="dot"></span>Join a crew</div>
+    <div class="input-group"><label>Invite code</label>
+      <input id="join-code-auth" type="text" placeholder="AB3X7Z" maxlength="6" value="${pre}" style="text-transform:uppercase;letter-spacing:3px;font-weight:600;font-size:16px"/>
+    </div>
+    ${S.error?`<div class="banner banner-error">${S.error}</div>`:''}
+    <button class="btn btn-primary" id="do-join-group-auth" ${S.loading?'disabled':''}>
+      ${S.loading?'<span class="spinner"></span> Joining…':'Join Crew'}
+    </button>
+  </div>
+</div>`;}
+
+// ── Screen: Group (main app) ──────────────────────────────────────────────────
+function groupHTML(){
+  const bc=S.bails.length;
+  const locData = myLocation();
+  return `<div class="fade-in">
+    <!-- Crew bar -->
+    <div class="crew-bar">
+      <div class="crew-icon" style="width:32px;height:32px;font-size:16px;border-radius:7px">⛳</div>
+      <div style="flex:1;min-width:0">
+        <div class="crew-bar-name">${S.group.name}</div>
+        <div class="crew-bar-sub">${S.members.length} members${locData?` · 📍 ${locData.label}`:''}</div>
+      </div>
+      ${S.authUser
+        ? `<button class="crew-switcher-btn" id="switch-crew">Switch ▾</button>`
+        : `<span class="badge" style="background:var(--border);color:var(--muted)">Guest</span>`}
+    </div>
+
+    <div class="tabs">
+      <button class="tab ${S.activeTab==='events'?'active':''}" id="tab-events">Events</button>
+      <button class="tab ${S.activeTab==='courses'?'active':''}" id="tab-courses">Courses</button>
+      <button class="tab ${S.activeTab==='availability'?'active':''}" id="tab-avail">Avail</button>
+      <button class="tab ${S.activeTab==='group'?'active':''}" id="tab-group">Calendar</button>
+      <button class="tab ${S.activeTab==='bails'?'active':''}" id="tab-bails">Bails${bc>0?` <span style="background:var(--red);color:#fff;border-radius:10px;padding:1px 5px;font-size:9px">${bc}</span>`:''}</button>
+      <button class="tab ${S.activeTab==='members'?'active':''}" id="tab-members">Crew</button>
+    </div>
+    ${S.activeTab==='events'       ? eventsTabHTML()       :''}
+    ${S.activeTab==='courses'      ? coursesTabHTML()      :''}
+    ${S.activeTab==='availability' ? availabilityTabHTML() :''}
+    ${S.activeTab==='group'        ? groupCalendarTabHTML():''}
+    ${S.activeTab==='bails'        ? bailsTabHTML()        :''}
+    ${S.activeTab==='members'      ? membersTabHTML()      :''}
+  </div>`;}
+
+// ── Tab: Events ───────────────────────────────────────────────────────────────
+function eventsTabHTML(){
+  const upcoming=S.events.filter(e=>e.event_date>=todayYMD());
+  const past=S.events.filter(e=>e.event_date<todayYMD());
+  const favs=getFavorites();
+  return `
+    ${S.showCreateEvent?createEventFormHTML():`<button class="btn btn-primary" id="show-create-event" style="margin-bottom:13px">+ Schedule a Tee Time</button>`}
+    ${upcoming.length===0&&!S.showCreateEvent?`<div class="card" style="text-align:center;padding:28px">
+      <div style="font-size:28px;margin-bottom:8px">⛳</div>
+      <div style="font-size:14px;font-weight:500;margin-bottom:6px">No upcoming tee times</div>
+      <p style="font-size:12px;color:var(--muted)">Hit "Schedule a Tee Time" to get one on the books.</p>
+    </div>`:upcoming.map(e=>eventCardHTML(e)).join('')}
+    ${past.length>0?`<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">Past rounds</div>${past.slice(-3).reverse().map(e=>eventCardHTML(e,true)).join('')}`:''}
+  `;}
+
+function createEventFormHTML(){
+  const favs=getFavorites();
+  const favOptions=favs.length>0?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${favs.map(f=>`<button class="radius-pill" data-fav-course="${f.name}">${f.name}</button>`).join('')}</div>`:'';
+  return `<div class="card">
+    <div class="card-title"><span class="dot"></span>Schedule a Tee Time</div>
+    ${favs.length>0?`<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Quick-fill from favorites:</div>${favOptions}`:''}
+    <div class="input-group"><label>Course name</label><input id="ev-course" type="text" placeholder="e.g. Bethpage Black" maxlength="60"/></div>
+    <div class="input-row">
+      <div><label>Date</label><input id="ev-date" type="date" min="${todayYMD()}"/></div>
+      <div><label>Tee time</label><input id="ev-time" type="time"/></div>
+    </div>
+    <div class="input-row">
+      <div><label>Spots</label><input id="ev-spots" type="number" min="1" max="20" value="4"/></div>
+      <div><label>Greens fee ($)</label><input id="ev-fee" type="number" min="0" placeholder="optional"/></div>
+    </div>
+    <div class="input-group"><label>Bail cutoff (hours)</label><input id="ev-cutoff" type="number" min="1" max="72" value="24"/></div>
+    ${S.error?`<div class="banner banner-error">${S.error}</div>`:''}
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" id="do-create-event" ${S.loading?'disabled':''}>${S.loading?'<span class="spinner"></span> Saving…':'Create Event'}</button>
+      <button class="btn btn-secondary" id="cancel-create-event" style="width:auto;padding:11px 16px">Cancel</button>
+    </div>
+  </div>`;}
+
+function eventCardHTML(event,isPast=false){
+  const rsvp=myRsvp(event.id);
+  const ins=S.rsvps.filter(r=>r.event_id===event.id&&r.status==='in');
+  const left=event.spots-ins.length;
+  const creator=memberById(event.created_by);
+  const pct=Math.min(100,(ins.length/event.spots)*100);
+  const statusPill=isPast?`<span class="pill pill-gray">Done</span>`:left===0?`<span class="pill pill-red">Full</span>`:`<span class="pill pill-green">${left} left</span>`;
+  const rsvpPill=rsvp?rsvp.status==='in'?`<span class="pill pill-green">In ✓</span>`:`<span class="pill pill-gray">Out</span>`:'';
+  const inMembers=ins.map(r=>{const m=memberById(r.member_id);return m?`<div class="avatar avatar-sm" title="${m.name}">${initials(m.name)}</div>`:''}).join('');
+  return `<div class="event-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+      <div><div class="event-course">${event.course_name}</div>
+      <div class="event-meta">${fmtDate(event.event_date)} · ${fmtTime(event.tee_time)}${event.greens_fee?` · $${Number(event.greens_fee).toFixed(0)}`:''}${creator?` · ${creator.name}`:''}</div></div>
+      <div style="display:flex;gap:4px;flex-shrink:0">${statusPill}${rsvpPill}</div>
+    </div>
+    <div class="spots-bar"><div class="spots-fill" style="width:${pct}%"></div></div>
+    <div class="rsvp-row">
+      <div class="rsvp-avatar-wrap">${inMembers||`<span style="font-size:12px;color:var(--muted)">No one in yet</span>`}</div>
+      ${!isPast?`<div class="rsvp-actions">
+        <button class="btn btn-sm ${rsvp?.status==='in'?'btn-in-active':'btn-in'}" data-event="${event.id}" data-action="in">${rsvp?.status==='in'?'✓ In':"I'm In"}</button>
+        <button class="btn btn-sm ${rsvp?.status==='out'?'btn-out-active':'btn-out'}" data-event="${event.id}" data-action="out">${rsvp?.status==='out'?'✗ Out':"I'm Out"}</button>
+      </div>`:''}
+    </div>
+    ${!isPast?`<div style="font-size:11px;color:var(--muted);margin-top:6px">Bail cutoff: ${event.cutoff_hours}h before${event.greens_fee?` · $${Number(event.greens_fee).toFixed(0)} owed if late bail`:''}</div>`:''}
+  </div>`;}
+
+// ── Tab: Courses ──────────────────────────────────────────────────────────────
+function coursesTabHTML(){
+  const favs=getFavorites();
+  const locCount=membersWithLocation().length;
+  return `
+    <div class="course-subtabs">
+      <button class="course-subtab ${S.courseSubTab==='nearby'?'active':''}" id="sub-nearby">📍 Nearby</button>
+      <button class="course-subtab ${S.courseSubTab==='favorites'?'active':''}" id="sub-favorites">⭐ Favs (${favs.length})</button>
+      <button class="course-subtab ${S.courseSubTab==='meetmiddle'?'active-blue active':''}" id="sub-mitm">🤝 Middle${locCount>0?` <span style="font-size:10px;opacity:.8">${locCount}</span>`:''}</button>
+    </div>
+    ${S.courseSubTab==='nearby'    ? nearbyHTML()    :''}
+    ${S.courseSubTab==='favorites' ? favoritesHTML() :''}
+    ${S.courseSubTab==='meetmiddle'? meetMiddleHTML():''}
+  `;}
+
+function nearbyHTML(){return `
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Search radius</div>
+    <div class="radius-pills">${[5,10,25,50].map(r=>`<button class="radius-pill ${S.searchRadius===r?'active':''}" data-radius="${r}">${r} mi</button>`).join('')}</div>
+    ${S.locationError?`<div class="banner banner-error">${S.locationError}</div>`:''}
+    ${S.userLat?`<div class="loc-status loc-status-green">📍 Location found · ${S.searchRadius} mi radius</div>`:''}
+    <button class="btn btn-primary" id="search-courses" ${S.courseLoading?'disabled':''}>${S.courseLoading?'<span class="spinner"></span> Searching…':S.userLat?'🔍 Search Again':'📍 Find Courses Near Me'}</button>
+  </div>
+  ${S.courseError?`<div class="banner banner-error">${S.courseError}</div>`:''}
+  ${S.nearbyCourses.length>0?`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">${S.nearbyCourses.length} courses within ${S.searchRadius} miles</div>${S.nearbyCourses.map(c=>courseCardHTML(c)).join('')}`:S.userLat&&!S.courseLoading?`<div class="card" style="text-align:center;padding:28px"><p style="font-size:12px;color:var(--muted)">No courses found. Try a larger radius.</p></div>`:''}`;}
+
+function favoritesHTML(){
+  const favs=getFavorites();
+  if(!favs.length) return `<div class="card" style="text-align:center;padding:28px"><div style="font-size:28px;margin-bottom:8px">⭐</div><p style="font-size:12px;color:var(--muted)">Star courses from Nearby to save them here.</p></div>`;
+  return `<div class="card"><div class="card-title"><span class="dot dot-gold"></span>Your crew's go-to courses</div>
+    ${favs.map(c=>`<div class="fav-course-row">
+      <div style="font-size:18px">⛳</div>
+      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">${c.name}</div><div style="font-size:11px;color:var(--muted)">${c.address}</div></div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <a class="dir-btn" href="${mapsLink(c.lat,c.lng,c.name)}" target="_blank">🗺</a>
+        <button class="fav-btn favorited" data-course-id="${c.id}" style="padding:5px 8px">✕</button>
+      </div>
+    </div>`).join('')}
+  </div>`;}
+
+function meetMiddleHTML(){
+  const lm=membersWithLocation(), total=S.members.length;
+  if(lm.length<2) return `
+    <div class="mitm-header"><div class="mitm-title">🤝 Meet in the Middle</div>
+    <div class="mitm-sub">Finds courses fair for everyone based on where your crew lives.</div></div>
+    <div class="card" style="text-align:center;padding:28px">
+      <div style="font-size:28px;margin-bottom:8px">📍</div>
+      <div style="font-size:14px;font-weight:500;margin-bottom:6px">Need at least 2 locations</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">${lm.length===0?'No members have set a home location yet.':'Only 1 member has set a location.'} Set yours on the Crew tab.</p>
+      <button class="btn btn-secondary" id="go-crew-tab">Go to Crew →</button>
+    </div>`;
+  const midpoint=S.mitmAlgo==='minimax'?S.mitmMidpointMinimax:S.mitmMidpoint;
+  return `
+    <div class="mitm-header"><div class="mitm-title">🤝 Meet in the Middle</div>
+    <div class="mitm-sub">${lm.length} of ${total} members have locations set</div>
+    ${midpoint?`<div class="mitm-midpoint">📍 Midpoint: ${midpoint.label}</div>`:''}</div>
+    <div class="algo-toggle">
+      <button class="algo-btn ${S.mitmAlgo==='centroid'?'active':''}" id="algo-centroid">⚖️ Centroid<div style="font-size:10px;font-weight:400;margin-top:2px">Geographic average</div></button>
+      <button class="algo-btn ${S.mitmAlgo==='minimax'?'active':''}" id="algo-minimax">🛡 Fairest for All<div style="font-size:10px;font-weight:400;margin-top:2px">Minimizes longest drive</div></button>
+    </div>
+    <div style="font-size:12px;padding:10px 13px;background:var(--blue-pale);border-radius:9px;color:var(--blue);margin-bottom:12px">
+      ${S.mitmAlgo==='centroid'?'⚖️ <strong>Centroid:</strong> geographic average. Best for evenly spread groups.':'🛡 <strong>Fairest for All:</strong> minimizes the longest individual drive. Best for 5+ people.'}
+    </div>
+    <div class="card" style="margin-bottom:13px"><div class="card-title"><span class="dot dot-blue"></span>Member locations</div>
+      ${S.members.map(m=>`<div style="display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <div class="avatar" style="width:28px;height:28px;font-size:11px">${initials(m.name)}</div>
+        <div style="flex:1;font-size:13px">${m.name}${m.id===S.currentMember?.id?' (you)':''}</div>
+        ${m.home_lat?`<span style="font-size:11px;color:var(--green);font-weight:500">📍 ${m.home_label||'Set'}</span>`:`<span style="font-size:11px;color:var(--subtle)">Not set</span>`}
+      </div>`).join('')}
+    </div>
+    <div class="radius-pills">${[5,10,25,50].map(r=>`<button class="radius-pill ${S.searchRadius===r?'active':''}" data-radius="${r}">${r} mi</button>`).join('')}</div>
+    <button class="btn btn-blue" id="search-mitm" ${S.mitmLoading?'disabled':''} style="margin-bottom:13px">${S.mitmLoading?'<span class="spinner"></span> Finding courses…':'🔍 Find Courses at Midpoint'}</button>
+    ${S.mitmError?`<div class="banner banner-error">${S.mitmError}</div>`:''}
+    ${S.mitmCourses.length>0?`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">${S.mitmCourses.length} courses near the ${S.mitmAlgo==='minimax'?'fairest':'central'} midpoint</div>${S.mitmCourses.map(c=>mitmCourseCardHTML(c,lm)).join('')}`:''}
+  `;}
+
+function courseCardHTML(c){
+  const fav=isFavorited(c.id);
+  const dist=c.dist<1?`${Math.round(c.dist*5280)} ft`:`${c.dist.toFixed(1)} mi away`;
+  return `<div class="course-card"><div style="display:flex;align-items:flex-start;gap:12px">
+    <div style="font-size:22px;flex-shrink:0">⛳</div>
+    <div style="flex:1;min-width:0"><div class="course-name">${c.name}</div><div class="course-meta">${dist} · ${c.address}</div>
+    <div class="course-actions">
+      <button class="fav-btn ${fav?'favorited':''}" data-course-id="${c.id}">${fav?'⭐ Favorited':'☆ Favorite'}</button>
+      <a class="dir-btn" href="${mapsLink(c.lat,c.lng,c.name)}" target="_blank">🗺 Directions</a>
+    </div></div></div></div>`;}
+
+function mitmCourseCardHTML(c,lm){
+  const fav=isFavorited(c.id);
+  const dists=lm.map(m=>({name:m.name,dist:haversine(m.home_lat,m.home_lng,c.lat,c.lng)}));
+  const maxD=Math.max(...dists.map(d=>d.dist));
+  const dist=c.dist<1?`${Math.round(c.dist*5280)} ft`:`${c.dist.toFixed(1)} mi from midpoint`;
+  return `<div class="course-card"><div style="display:flex;align-items:flex-start;gap:12px">
+    <div style="font-size:22px;flex-shrink:0">⛳</div>
+    <div style="flex:1;min-width:0"><div class="course-name">${c.name}</div><div class="course-meta">${dist} · ${c.address}</div>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:5px">
+      ${dists.map(d=>`<div class="member-dist-row">
+        <div style="font-size:11px;width:70px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name.split(' ')[0]}</div>
+        <div class="member-dist-bar-wrap"><div class="member-dist-bar" style="width:${Math.round((d.dist/maxD)*100)}%"></div></div>
+        <div class="member-dist-label">${d.dist.toFixed(1)} mi</div>
+      </div>`).join('')}
+    </div>
+    <div class="course-actions">
+      <button class="fav-btn ${fav?'favorited':''}" data-course-id="${c.id}">${fav?'⭐ Favorited':'☆ Favorite'}</button>
+      <a class="dir-btn" href="${mapsLink(c.lat,c.lng,c.name)}" target="_blank">🗺 Directions</a>
+    </div></div></div></div>`;}
+
+// ── Tab: Group Calendar (renamed from Group) ──────────────────────────────────
+function groupCalendarTabHTML(){
+  const days=calDays(S.calOffset),DOWS=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const total=S.members.length,countByDate={};
+  S.groupAvailability.forEach(r=>{if(!countByDate[r.avail_date])countByDate[r.avail_date]=new Set();countByDate[r.avail_date].add(r.member_id);});
+  function heatClass(c){if(!c)return'heat-0';const p=c/total;if(p<=.25)return'heat-1';if(p<=.5)return'heat-2';if(p<=.75)return'heat-3';return'heat-4';}
+  const dayCells=days.map(d=>{
+    if(d.isEmpty)return`<div class="overlap-day empty"></div>`;
+    const count=countByDate[d.ymd]?.size||0;
+    return`<div class="overlap-day ${heatClass(count)} ${d.isPast?'past':''}"><span class="overlap-num">${d.date.getDate()}</span>${count>0?`<span class="overlap-count">${count}/${total}</span>`:''}</div>`;
+  }).join('');
+  const today=todayYMD();
+  const bestDays=Object.entries(countByDate).filter(([d])=>d>=today).sort((a,b)=>b[1].size-a[1].size).slice(0,3);
+  return `<div class="card">
+    <div class="cal-header">
+      <button class="cal-nav" id="cal-prev-g" ${S.calOffset<=0?'disabled style="opacity:.3;cursor:not-allowed"':''}>‹</button>
+      <span class="cal-month">${monthLabel(S.calOffset)}</span>
+      <button class="cal-nav" id="cal-next-g">›</button>
+    </div>
+    <div class="overlap-grid">${DOWS.map(d=>`<div class="overlap-dow">${d}</div>`).join('')}${dayCells}</div>
+    <div class="legend"><span class="legend-label">Fewer</span>${[1,2,3,4].map(i=>`<div class="legend-swatch heat-${i}"></div>`).join('')}<span class="legend-label">More</span></div>
+  </div>
+  ${bestDays.length>0?`<div class="card"><div class="card-title"><span class="dot dot-gold"></span>Best upcoming days</div>
+    ${bestDays.map(([date,members])=>{
+      // F-05: show time-of-day overlap for best days
+      const tods=[...new Set(S.groupAvailability
+        .filter(r=>r.avail_date===date&&members.has(r.member_id)&&r.time_of_day)
+        .map(r=>r.time_of_day))];
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:13px;font-weight:500">${fmtDate(date)}</div>
+          ${tods.length?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${tods.join(' · ')}</div>`:''}
+        </div>
+        <div style="font-size:12px;font-weight:600;color:var(--green)">${members.size} of ${total} free</div>
+      </div>`;
+    }).join('')}</div>`:''}
+  <button class="btn btn-secondary" id="refresh-btn" style="margin-top:4px">↻ Refresh</button>`;}
+
+// ── Tab: Availability ─────────────────────────────────────────────────────────
+function availabilityTabHTML(){
+  const days=calDays(S.calOffset),DOWS=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const myDates=new Set(S.myAvailability.map(r=>r.avail_date));
+  const myTOD={};
+  S.myAvailability.forEach(r=>{if(!myTOD[r.avail_date])myTOD[r.avail_date]=new Set();myTOD[r.avail_date].add(r.time_of_day);});
+  const dayCells=days.map(d=>{
+    if(d.isEmpty)return`<div class="cal-day cal-empty"></div>`;
+    const sel=myDates.has(d.ymd);
+    const cls=['cal-day',d.isPast?'cal-past':'',d.isToday?'cal-today':'',sel?'cal-selected':''].filter(Boolean).join(' ');
+    const dots=sel&&myTOD[d.ymd]?[...myTOD[d.ymd]].map(()=>`<div class="cal-dot"></div>`).join(''):'';
+    return`<div class="${cls}" data-ymd="${d.ymd}"><span class="cal-day-num">${d.date.getDate()}</span>${dots?`<div class="cal-dots">${dots}</div>`:''}</div>`;
+  }).join('');
+  const todPicker=S.selectedDate?`<div class="tod-picker">
+    <div class="tod-label">Time of day · ${fmtDate(S.selectedDate)}</div>
+    <div class="tod-options">${['morning','afternoon','evening'].map(t=>`
+      <button class="tod-btn ${(myTOD[S.selectedDate]||new Set()).has(t)?'active':''}" data-tod="${t}" data-date="${S.selectedDate}">
+        ${t==='morning'?'🌅':t==='afternoon'?'☀️':'🌇'} ${t.charAt(0).toUpperCase()+t.slice(1)}
+      </button>`).join('')}</div>
+  </div>`:'';
+  return`<div class="card">
+    <div class="cal-header">
+      <button class="cal-nav" id="cal-prev" ${S.calOffset<=0?'disabled style="opacity:.3;cursor:not-allowed"':''}>‹</button>
+      <span class="cal-month">${monthLabel(S.calOffset)}</span>
+      <button class="cal-nav" id="cal-next">›</button>
+    </div>
+    <div class="cal-grid">${DOWS.map(d=>`<div class="cal-dow">${d}</div>`).join('')}${dayCells}</div>
+    ${todPicker}
+    <p style="font-size:11px;color:var(--muted);margin-top:10px">Tap a day to mark free. Set morning / afternoon / evening preference.</p>
+  </div>`;}
+
+// ── Tab: Bails ────────────────────────────────────────────────────────────────
+function bailsTabHTML(){
+  if(!S.bails.length) return`<div class="card" style="text-align:center;padding:28px">
+    <div style="font-size:28px;margin-bottom:8px">🤝</div>
+    <div style="font-size:14px;font-weight:500;margin-bottom:6px">No bails on record</div>
+    <p style="font-size:12px;color:var(--muted)">Bails logged when someone cancels inside the cutoff window.</p>
+  </div>`;
+  return`<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Tap a pay link to request payment.</div>
+  ${S.bails.map(bail=>{
+    const member=memberById(bail.member_id),event=S.events.find(e=>e.id===bail.event_id);
+    if(!member||!event) return'';
+    const note=`GreenTime bail - ${event.course_name} ${fmtDate(event.event_date)}`;
+    const amt=bail.amount_owed?Number(bail.amount_owed).toFixed(2):null;
+    return`<div class="bail-card">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px">
+        <div class="avatar" style="background:var(--red)">${initials(member.name)}</div>
+        <div style="flex:1"><div class="bail-name">${member.name} bailed</div>
+        <div style="font-size:11px;color:var(--muted)">${new Date(bail.bailed_at).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div></div>
+        ${amt?`<span class="badge badge-red">$${amt} owed</span>`:''}
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${event.course_name} · ${fmtDate(event.event_date)} at ${fmtTime(event.tee_time)}</div>
+      ${amt?`<div class="pay-links">
+        <a class="pay-btn" href="${venmoLink(amt,note)}">💸 Venmo</a>
+        <a class="pay-btn" href="${cashappLink(amt,note)}" target="_blank">💚 Cash App</a>
+        <a class="pay-btn" href="zelle://">⚡ Zelle</a>
+      </div>`:`<div style="font-size:12px;color:var(--muted)">No greens fee set for this event.</div>`}
+    </div>`;
+  }).join('')}`;}
+
+// ── Tab: Crew/Members ─────────────────────────────────────────────────────────
+function membersTabHTML(){
+  const g=S.group;
+  const shareURL=`${location.origin}${location.pathname}#join=${g.invite_code}`;
+  const locData=myLocation();
+  return`
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>${g.name}</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${S.members.map(m=>{
+          const bc=bailCount(m.id),isMe=m.id===S.currentMember?.id;
+          return`<div class="member-row">
+            <div class="avatar">${initials(m.name)}</div>
+            <div style="flex:1">
+              <div class="member-name">${m.name}${isMe?' (you)':''}</div>
+              <div class="member-sub">${m.is_admin?'Admin · ':''}${m.home_label?`📍 ${m.home_label}`:'No location set'}</div>
+            </div>
+            ${m.is_admin?'<span class="badge">Admin</span>':''}
+            ${bc>0?`<span class="badge badge-red" style="${m.is_admin?'margin-left:6px':'margin-left:auto'}">${bc} bail${bc!==1?'s':''}</span>`:''}
+          </div>
+          ${isMe?`<div style="margin-left:44px;margin-top:4px;margin-bottom:4px">
+            ${S.showLocInput?`
+              <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                <input id="loc-text-input" type="text" placeholder="e.g. Hoboken, NJ" style="flex:1;min-width:140px;padding:7px 11px;font-size:13px" value="${m.home_label||''}"/>
+                <button class="btn btn-primary btn-sm" id="save-loc-text" ${S.loading?'disabled':''}>${S.loading?'<span class="spinner"></span>':'Save'}</button>
+                <button class="btn btn-ghost" id="cancel-loc-input">Cancel</button>
+              </div>
+              ${S.locInputError?`<div style="font-size:12px;color:var(--red);margin-top:5px">${S.locInputError}</div>`:''}
+              <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+                <span style="font-size:11px;color:var(--subtle)">or</span>
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="set-location-gps" style="margin-top:8px">📍 Use GPS</button>
+            `:`<button class="btn btn-secondary btn-sm" id="show-loc-input">${m.home_lat?'📍 Update My Location':'📍 Set My Location'}</button>`}
+          </div>`:''}`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot dot-gold"></span>Invite friends</div>
+      <div class="share-box">
+        <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Group code</div>
+        <div style="display:flex;align-items:center;gap:9px;margin-top:5px">
+          <span class="share-code">${g.invite_code}</span>
+          <button class="btn btn-secondary btn-sm" id="copy-code">Copy</button>
+        </div>
+        <div class="share-url">${shareURL}</div>
+        <button class="btn btn-primary btn-sm" id="copy-link" style="margin-top:9px;width:100%">Copy invite link</button>
+        <div class="copied-msg" id="copied-msg">✓ Copied!</div>
+      </div>
+    </div>
+    ${S.isGuest?`<button class="btn btn-ghost" id="leave-group" style="color:var(--subtle)">Leave this group</button>`:''}
+  `;}
+
+// ── Calendar helpers ──────────────────────────────────────────────────────────
+function calDays(offset){
+  const now=new Date(),y=now.getFullYear(),m=now.getMonth()+offset;
+  const first=new Date(y,m,1),last=new Date(y,m+1,0),today=todayYMD();
+  const days=[];
+  for(let i=0;i<first.getDay();i++) days.push({isEmpty:true});
+  for(let d=1;d<=last.getDate();d++){const date=new Date(y,m,d);const ymd=toYMD(date);days.push({date,ymd,isToday:ymd===today,isPast:ymd<today});}
+  return days;
+}
+function monthLabel(offset){const now=new Date();return new Date(now.getFullYear(),now.getMonth()+offset,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});}
+
+// ── Event handlers ────────────────────────────────────────────────────────────
+function attachEvents(){
+  // ── Auth ──
+  q('#send-magic-link')?.addEventListener('click',async()=>{
+    const email=q('#auth-email')?.value.trim();
+    if(!email){S.error='Please enter your email.';render();return;}
+    S.loading=true;S.error=null;render();
+    const{error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
+    if(error){S.error=error.message;S.loading=false;render();return;}
+    S._sentEmail=email;S.screen='check-email';S.loading=false;render();
+  });
+
+  q('#back-to-login')?.addEventListener('click',()=>{S.screen='login';S.error=null;render();});
+  q('#go-guest')?.addEventListener('click',()=>{S.screen='join-guest';S.error=null;render();});
+
+  q('#do-setup-profile')?.addEventListener('click',async()=>{
+    const name=q('#setup-name')?.value.trim();
+    if(!name){S.error='Please enter your name.';render();return;}
+    S.loading=true;S.error=null;render();
+    try{
+      await sb.rpc('upsert_user_profile',{p_display_name:name});
+      const{data:profile}=await sb.from('user_profiles').select('*').eq('id',S.authUser.id).single();
+      S.userProfile=profile;
+      await loadMyCrews();
+      S.screen='crew-list';
+    }catch(e){S.error='Could not save profile. Please try again.';}
+    S.loading=false;render();
+  });
+
+  q('#sign-out')?.addEventListener('click',async()=>{
+    await sb.auth.signOut();
+    S.screen='login';render();
+  });
+
+  // ── Crew list ──
+  q('#create-crew-auth')?.addEventListener('click',()=>{S.screen='create-group';S.error=null;render();});
+  q('#join-crew-auth')?.addEventListener('click',()=>{S.screen='join-group';S.error=null;render();});
+  q('#back-to-crews')?.addEventListener('click',()=>{S.screen='crew-list';S.error=null;render();});
+  q('#switch-crew')?.addEventListener('click',()=>{S.screen='crew-list';render();});
+
+  // Profile settings
+  q('#go-profile-settings')?.addEventListener('click',()=>{S.showProfile=true;S.locInputError=null;render();});
+  q('#close-profile-settings')?.addEventListener('click',()=>{S.showProfile=false;render();});
+
+  q('#save-profile-name')?.addEventListener('click',async()=>{
+    const name=q('#profile-name')?.value.trim();
+    if(!name) return;
+    await sb.rpc('upsert_user_profile',{p_display_name:name});
+    S.userProfile={...S.userProfile,display_name:name};
+    render();
+  });
+
+  q('#save-profile-loc-text')?.addEventListener('click',async()=>{
+    const val=q('#profile-loc-text')?.value.trim();
+    if(!val){S.locInputError='Please enter a location.';render();return;}
+    S.loading=true;render();
+    try{
+      const resp=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=1`,{headers:{'Accept-Language':'en'}});
+      const results=await resp.json();
+      if(!results?.length){S.locInputError=`Could not find "${val}". Try being more specific.`;S.loading=false;render();return;}
+      const top=results[0];
+      const lat=parseFloat(top.lat),lng=parseFloat(top.lon);
+      const parts=top.display_name.split(',').map(p=>p.trim());
+      const label=parts.slice(0,2).join(', ');
+      await sb.rpc('upsert_user_profile',{p_display_name:S.userProfile.display_name,p_home_lat:lat,p_home_lng:lng,p_home_label:label});
+      S.userProfile={...S.userProfile,home_lat:lat,home_lng:lng,home_label:label};
+      S.locInputError=null;
+    }catch(e){S.locInputError='Geocoding failed. Check your connection.';}
+    S.loading=false;render();
+  });
+
+  q('#save-profile-loc-gps')?.addEventListener('click',()=>{
+    S.loading=true;render();
+    navigator.geolocation.getCurrentPosition(async pos=>{
+      const lat=pos.coords.latitude,lng=pos.coords.longitude;
+      const label=await reverseGeocode(lat,lng);
+      await sb.rpc('upsert_user_profile',{p_display_name:S.userProfile.display_name,p_home_lat:lat,p_home_lng:lng,p_home_label:label});
+      S.userProfile={...S.userProfile,home_lat:lat,home_lng:lng,home_label:label};
+      S.loading=false;render();
+    },()=>{S.locInputError='GPS denied.';S.loading=false;render();});
+  });
+
+  // ── Group: create (auth) ──
+  q('#do-create-group')?.addEventListener('click',async()=>{
+    const name=q('#grp-name')?.value.trim();
+    if(!name){S.error='Please enter a crew name.';render();return;}
+    S.loading=true;S.error=null;render();
+    try{
+      const{data:grp,error:e1}=await sb.from('groups').insert({name,invite_code:genCode()}).select().single();if(e1)throw e1;
+      const loc=S.userProfile;
+      const{data:mem,error:e2}=await sb.from('members').insert({
+        group_id:grp.id,name:S.userProfile.display_name,is_admin:true,
+        user_id:S.authUser.id,
+        home_lat:loc?.home_lat||null,home_lng:loc?.home_lng||null,home_label:loc?.home_label||null
+      }).select().single();if(e2)throw e2;
+      await loadMyCrews();
+      await enterCrew(grp,mem);
+    }catch(e){S.error='Could not create crew. Please try again.';}
+    S.loading=false;render();
+  });
+
+  // ── Group: join (auth) ──
+  q('#do-join-group-auth')?.addEventListener('click',async()=>{
+    const code=q('#join-code-auth')?.value.trim().toUpperCase();
+    if(!code||code.length!==6){S.error='Please enter the 6-character code.';render();return;}
+    S.loading=true;S.error=null;render();
+    try{
+      const{data:grp,error:e1}=await sb.from('groups').select('*').eq('invite_code',code).single();
+      if(e1||!grp){S.error='Group not found. Check the code.';S.loading=false;render();return;}
+      const loc=S.userProfile;
+      const{data:mem,error:e2}=await sb.from('members').insert({
+        group_id:grp.id,name:S.userProfile.display_name,is_admin:false,
+        user_id:S.authUser.id,
+        home_lat:loc?.home_lat||null,home_lng:loc?.home_lng||null,home_label:loc?.home_label||null
+      }).select().single();if(e2)throw e2;
+      location.hash='';
+      await loadMyCrews();
+      await enterCrew(grp,mem);
+    }catch(e){S.error='Could not join. Please try again.';}
+    S.loading=false;render();
+  });
+
+  // ── Group: join (guest) ──
+  q('#do-join-guest')?.addEventListener('click',async()=>{
+    const code=q('#join-code')?.value.trim().toUpperCase();
+    const user=q('#join-name')?.value.trim();
+    if(!code||code.length!==6){S.error='Please enter the 6-character code.';render();return;}
+    if(!user){S.error='Please enter your name.';render();return;}
+    S.loading=true;S.error=null;render();
+    try{
+      const{data:grp,error:e1}=await sb.from('groups').select('*').eq('invite_code',code).single();
+      if(e1||!grp){S.error='Group not found. Check the code.';S.loading=false;render();return;}
+      const{data:mem,error:e2}=await sb.from('members').insert({group_id:grp.id,name:user,is_admin:false}).select().single();if(e2)throw e2;
+      const{data:members}=await sb.from('members').select('*').eq('group_id',grp.id);
+      S.group=grp;S.members=members||[];S.currentMember=mem;
+      S.isGuest=true;S.screen='group';S.activeTab='events';
+      location.hash='';saveGuestSession();await loadAll();
+    }catch(e){S.error='Could not join. Please try again.';}
+    S.loading=false;render();
+  });
+
+  // Crew card click
+  document.querySelectorAll('.crew-card[data-group-id]').forEach(card=>{
+    card.addEventListener('click',async()=>{
+      const crew=S.myCrews.find(c=>c.group.id===card.dataset.groupId);
+      if(crew) await enterCrew(crew.group,crew.member);
+    });
+  });
+
+  // ── Tabs ──
+  q('#tab-events')?.addEventListener('click',()=>{S.activeTab='events';render();});
+  q('#tab-courses')?.addEventListener('click',()=>{S.activeTab='courses';render();});
+  q('#tab-avail')?.addEventListener('click',()=>{S.activeTab='availability';render();});
+  q('#tab-group')?.addEventListener('click',()=>{S.activeTab='group';render();});
+  q('#tab-bails')?.addEventListener('click',()=>{S.activeTab='bails';render();});
+  q('#tab-members')?.addEventListener('click',()=>{S.activeTab='members';render();});
+
+  // ── Course sub-tabs ──
+  q('#sub-nearby')?.addEventListener('click',()=>{S.courseSubTab='nearby';render();});
+  q('#sub-favorites')?.addEventListener('click',()=>{S.courseSubTab='favorites';render();});
+  q('#sub-mitm')?.addEventListener('click',()=>{S.courseSubTab='meetmiddle';render();});
+  q('#go-crew-tab')?.addEventListener('click',()=>{S.activeTab='members';render();});
+  q('#algo-centroid')?.addEventListener('click',()=>{S.mitmAlgo='centroid';S.mitmCourses=[];render();});
+  q('#algo-minimax')?.addEventListener('click',()=>{S.mitmAlgo='minimax';S.mitmCourses=[];render();});
+
+  // Radius pills
+  document.querySelectorAll('.radius-pill[data-radius]').forEach(btn=>{
+    btn.addEventListener('click',()=>{S.searchRadius=parseInt(btn.dataset.radius);render();});
+  });
+
+  // Fav quick-fill
+  document.querySelectorAll('[data-fav-course]').forEach(btn=>{
+    btn.addEventListener('click',()=>{const inp=q('#ev-course');if(inp)inp.value=btn.dataset.favCourse;});
+  });
+
+  // Search nearby
+  q('#search-courses')?.addEventListener('click',()=>{
+    S.courseLoading=true;S.courseError=null;S.locationError=null;render();
+    navigator.geolocation.getCurrentPosition(
+      async pos=>{S.userLat=pos.coords.latitude;S.userLng=pos.coords.longitude;
+        try{S.nearbyCourses=await searchNearbyCourses(S.userLat,S.userLng,S.searchRadius);}
+        catch(e){S.courseError='Could not reach course search. Try again.';}
+        S.courseLoading=false;render();},
+      ()=>{S.locationError='Location access denied.';S.courseLoading=false;render();}
+    );
+  });
+
+  q('#search-mitm')?.addEventListener('click',()=>runMitmSearch());
+
+  // Favorites
+  document.querySelectorAll('.fav-btn[data-course-id]').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const id=btn.dataset.courseId;
+      const course=S.nearbyCourses.find(c=>c.id===id)||S.mitmCourses.find(c=>c.id===id)||getFavorites().find(c=>c.id===id);
+      if(course) await toggleFavorite(course);
+    });
+  });
+
+  // Location (in-group Crew tab)
+  q('#show-loc-input')?.addEventListener('click',()=>{S.showLocInput=true;S.locInputError=null;render();});
+  q('#cancel-loc-input')?.addEventListener('click',()=>{S.showLocInput=false;S.locInputError=null;render();});
+
+  q('#save-loc-text')?.addEventListener('click',async()=>{
+    const val=q('#loc-text-input')?.value.trim();
+    if(!val){S.locInputError='Please enter a location.';render();return;}
+    S.loading=true;S.locInputError=null;render();
+    try{
+      const resp=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=1`,{headers:{'Accept-Language':'en'}});
+      const results=await resp.json();
+      if(!results?.length){S.locInputError=`Could not find "${val}".`;S.loading=false;render();return;}
+      const top=results[0];
+      const lat=parseFloat(top.lat),lng=parseFloat(top.lon);
+      const parts=top.display_name.split(',').map(p=>p.trim());
+      const label=parts.slice(0,2).join(', ');
+      await saveLocation(lat,lng,label);
+      S.showLocInput=false;
+    }catch(e){S.locInputError='Geocoding failed.';}
+    S.loading=false;render();
+  });
+
+  q('#set-location-gps')?.addEventListener('click',()=>{
+    S.loading=true;render();
+    navigator.geolocation.getCurrentPosition(async pos=>{
+      const lat=pos.coords.latitude,lng=pos.coords.longitude;
+      const label=await reverseGeocode(lat,lng);
+      await saveLocation(lat,lng,label);
+      S.showLocInput=false;S.loading=false;render();
+    },()=>{S.locInputError='GPS denied. Try typing your location.';S.loading=false;render();});
+  });
+
+  // Events
+  q('#show-create-event')?.addEventListener('click',()=>{S.showCreateEvent=true;S.error=null;render();});
+  q('#cancel-create-event')?.addEventListener('click',()=>{S.showCreateEvent=false;S.error=null;render();});
+
+  q('#do-create-event')?.addEventListener('click',async()=>{
+    const course=q('#ev-course')?.value.trim(),date=q('#ev-date')?.value,time=q('#ev-time')?.value;
+    const spots=parseInt(q('#ev-spots')?.value||'4'),fee=q('#ev-fee')?.value?parseFloat(q('#ev-fee').value):null;
+    const cutoff=parseInt(q('#ev-cutoff')?.value||'24');
+    if(!course){S.error='Please enter a course name.';render();return;}
+    if(!date){S.error='Please pick a date.';render();return;}
+    if(!time){S.error='Please pick a tee time.';render();return;}
+    S.loading=true;S.error=null;render();
+    try{
+      const{error:e}=await sb.from('events').insert({group_id:S.group.id,created_by:S.currentMember.id,course_name:course,event_date:date,tee_time:time,spots,greens_fee:fee,cutoff_hours:cutoff});
+      if(e)throw e;S.showCreateEvent=false;await loadEvents();
+    }catch(e){S.error='Could not create event.';}
+    S.loading=false;render();
+  });
+
+  // RSVP
+  document.querySelectorAll('[data-action="in"],[data-action="out"]').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const eventId=btn.dataset.event,action=btn.dataset.action;
+      const event=S.events.find(e=>e.id===eventId),existing=myRsvp(eventId);
+      if(action==='out'&&existing?.status==='in'&&isBailWindow(event,existing)){
+        // B-01 fix: deduplicate bail log
+        const{data:existingBail}=await sb.from('bail_log').select('id').eq('event_id',eventId).eq('member_id',S.currentMember.id).maybeSingle();
+        if(!existingBail) await sb.from('bail_log').insert({event_id:eventId,member_id:S.currentMember.id,group_id:S.group.id,amount_owed:event.greens_fee||null});
+      }
+      if(existing){await sb.from('rsvps').update({status:action,confirmed_at:action==='in'?new Date().toISOString():existing.confirmed_at,updated_at:new Date().toISOString()}).eq('id',existing.id);}
+      else{await sb.from('rsvps').insert({event_id:eventId,member_id:S.currentMember.id,group_id:S.group.id,status:action,confirmed_at:action==='in'?new Date().toISOString():null});}
+      await loadEvents();render();
+    });
+  });
+
+  // Calendar
+  q('#cal-prev')?.addEventListener('click',()=>{if(S.calOffset>0){S.calOffset--;S.selectedDate=null;render();}});
+  q('#cal-next')?.addEventListener('click',()=>{S.calOffset++;S.selectedDate=null;render();});
+  q('#cal-prev-g')?.addEventListener('click',()=>{if(S.calOffset>0){S.calOffset--;render();}});
+  q('#cal-next-g')?.addEventListener('click',()=>{S.calOffset++;render();});
+
+  document.querySelectorAll('.cal-day:not(.cal-empty):not(.cal-past)').forEach(el=>{
+    el.addEventListener('click',async()=>{
+      const ymd=el.dataset.ymd;S.selectedDate=ymd;
+      if(S.myAvailability.some(r=>r.avail_date===ymd)){await sb.from('availability').delete().eq('member_id',S.currentMember.id).eq('avail_date',ymd);S.selectedDate=null;}
+      await loadAvailability();render();
+    });
+  });
+
+  document.querySelectorAll('.tod-btn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const tod=btn.dataset.tod,date=btn.dataset.date;
+      const existing=S.myAvailability.find(r=>r.avail_date===date&&r.time_of_day===tod);
+      if(existing){await sb.from('availability').delete().eq('id',existing.id);}
+      else{await sb.from('availability').insert({member_id:S.currentMember.id,group_id:S.group.id,avail_date:date,time_of_day:tod});}
+      await loadAvailability();render();
+    });
+  });
+
+  // Share
+  q('#copy-code')?.addEventListener('click',()=>{navigator.clipboard?.writeText(S.group.invite_code);showCopied();});
+  q('#copy-link')?.addEventListener('click',()=>{navigator.clipboard?.writeText(`${location.origin}${location.pathname}#join=${S.group.invite_code}`);showCopied();});
+
+  // Refresh
+  q('#refresh-btn')?.addEventListener('click',async()=>{S.loading=true;render();await loadAll();if(S.authUser)await loadMyCrews();S.loading=false;render();});
+
+  // Leave (guest only)
+  q('#leave-group')?.addEventListener('click',()=>{
+    if(confirm('Leave this group?')){clearGuestSession();S.group=null;S.members=[];S.currentMember=null;S.isGuest=false;S.screen='login';render();}
+  });
+}
+</script>
+</body>
+</html>

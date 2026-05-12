@@ -1138,7 +1138,7 @@ function attachEvents(){
     const email=q('#auth-email')?.value.trim();
     if(!email){S.error='Please enter your email.';render();return;}
     S.loading=true;S.error=null;render();
-    const{error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
+    const{error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:'https://greentime-two.vercel.app'}});
     if(error){S.error=error.message;S.loading=false;render();return;}
     S._sentEmail=email;S.screen='check-email';S.loading=false;render();
   });

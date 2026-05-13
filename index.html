@@ -35,6 +35,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .logo-icon svg{width:19px;height:19px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .logo-text{font-family:'Playfair Display',serif;font-size:23px;color:var(--text)}
 .tagline{color:var(--muted);font-size:12px}
+.menu-item-btn{width:100%;padding:10px 13px;border-radius:9px;border:none;background:transparent;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;text-align:left;transition:all .15s;}
+.menu-item-btn:hover{background:var(--green-pale);color:var(--green)}
+.upvote-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;width:36px;min-height:42px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;transition:all .15s;padding:4px;}
+.upvote-btn:hover{border-color:var(--green);color:var(--green)}
+.upvote-active{background:var(--green-pale);border-color:var(--green);color:var(--green)}
 .hamburger-btn{
   position:absolute;top:32px;right:0;
   background:transparent;border:1.5px solid var(--border);
@@ -326,6 +331,11 @@ let S = {
   // Location input
   showLocInput: false, locInputError: null,
 
+  // Menu + pages
+  showMenu: false,
+  suggestions: [], myUpvotes: new Set(),
+  suggestionLoading: false, suggestionError: null, suggestionSuccess: false,
+
   // UI
   loading: false, error: null,
 };
@@ -455,6 +465,15 @@ async function loadAvailability() {
   S.groupAvailability = data||[];
   S.myAvailability = S.groupAvailability.filter(r=>r.member_id===S.currentMember.id);
   console.log('loadAvailability done');
+}
+
+async function loadSuggestions() {
+  const { data: sugs } = await sb.from('suggestions').select('*').order('upvotes', { ascending: false });
+  S.suggestions = sugs || [];
+  if (S.authUser) {
+    const { data: myVotes } = await sb.from('suggestion_upvotes').select('suggestion_id').eq('user_id', S.authUser.id);
+    S.myUpvotes = new Set((myVotes || []).map(v => v.suggestion_id));
+  }
 }
 
 async function refreshGroup() {
@@ -609,6 +628,8 @@ function html(){
     ${S.screen==='create-group'  ? createGroupHTML()  : ''}
     ${S.screen==='join-group'    ? joinGroupHTML()    : ''}
     ${S.screen==='group'         ? groupHTML()        : ''}
+    ${S.screen==='suggestions' ? suggestionsHTML() : ''}
+    ${S.showMenu ? menuPanelHTML() : ''}
   `;}
 
 // ── Screen: Login ─────────────────────────────────────────────────────────────
@@ -738,6 +759,65 @@ function profileSettingsHTML(){
       ${S.locInputError?`<div style="font-size:12px;color:var(--red);margin-top:6px">${S.locInputError}</div>`:''}
     </div>
     <button class="btn btn-ghost" id="close-profile-settings">Close</button>
+  </div>`;}
+
+function menuPanelHTML(){
+  return `<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:flex-start;justify-content:flex-end" id="menu-overlay">
+    <div style="background:var(--card);border-left:1px solid var(--border);width:220px;height:100%;padding:24px 16px;display:flex;flex-direction:column;gap:6px;box-shadow:-4px 0 24px rgba(0,0,0,.15)">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">GreenTime</div>
+      <button class="menu-item-btn" id="menu-suggestions">💡 Suggestions</button>
+      <button class="menu-item-btn" id="menu-roadmap">🗺 Roadmap</button>
+      <button class="menu-item-btn" id="menu-changelog">📋 Changelog</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" id="close-menu" style="text-align:left">✕ Close</button>
+    </div>
+  </div>`;}
+
+function suggestionsHTML(){
+  const isAuth = !!S.authUser;
+  return `<div class="fade-in">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <button class="btn btn-ghost" id="back-from-suggestions">← Back</button>
+      <div style="font-size:16px;font-weight:600">💡 Suggestions</div>
+    </div>
+    ${!isAuth ? `<div class="card" style="text-align:center;padding:28px">
+      <div style="font-size:28px;margin-bottom:8px">🔒</div>
+      <div style="font-size:14px;font-weight:500;margin-bottom:6px">Sign in to suggest features</div>
+      <p style="font-size:12px;color:var(--muted)">Guest users can view but not submit suggestions.</p>
+    </div>` : `<div class="card">
+      <div class="card-title"><span class="dot"></span>Submit an idea</div>
+      <div class="input-group"><label>Title</label>
+        <input id="sug-title" type="text" placeholder="e.g. Show handicap on profile" maxlength="80"/>
+      </div>
+      <div class="input-group"><label>Description <span style="color:var(--muted);font-size:11px">(optional)</span></label>
+        <input id="sug-desc" type="text" placeholder="More detail about the idea" maxlength="200"/>
+      </div>
+      ${S.suggestionError ? `<div class="banner banner-error">${S.suggestionError}</div>` : ''}
+      ${S.suggestionSuccess ? `<div class="banner banner-success">✓ Suggestion submitted!</div>` : ''}
+      <button class="btn btn-primary" id="do-submit-suggestion" ${S.suggestionLoading?'disabled':''}>
+        ${S.suggestionLoading ? '<span class="spinner"></span> Submitting…' : 'Submit Idea'}
+      </button>
+    </div>`}
+    <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 10px">
+      All Ideas (${S.suggestions.length})
+    </div>
+    ${S.suggestions.length === 0 ? `<div class="card" style="text-align:center;padding:28px">
+      <p style="font-size:12px;color:var(--muted)">No suggestions yet. Be the first!</p>
+    </div>` : S.suggestions.map(sug => {
+      const voted = S.myUpvotes.has(sug.id);
+      return `<div class="card" style="padding:14px 16px">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <button class="upvote-btn ${voted?'upvote-active':''}" data-sug-id="${sug.id}">
+            ▲<span style="font-size:11px;display:block;line-height:1">${sug.upvotes||0}</span>
+          </button>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:600;margin-bottom:3px">${sug.title}</div>
+            ${sug.description ? `<div style="font-size:12px;color:var(--muted);margin-bottom:5px">${sug.description}</div>` : ''}
+            <div style="font-size:11px;color:var(--subtle)">${sug.display_name||'Anonymous'} · ${new Date(sug.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
   </div>`;}
 
 // ── Screen: Join as guest ─────────────────────────────────────────────────────
@@ -1171,8 +1251,60 @@ const withTimeout=(p,ms=15000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(
 
 // ── Event handlers ────────────────────────────────────────────────────────────
 function attachEvents(){
-  q('#open-menu')?.addEventListener('click', () => {
-    console.log('menu clicked');
+  q('#open-menu')?.addEventListener('click', () => { S.showMenu = true; render(); });
+  q('#close-menu')?.addEventListener('click', () => { S.showMenu = false; render(); });
+  q('#menu-overlay')?.addEventListener('click', (e) => { if(e.target.id==='menu-overlay'){S.showMenu=false;render();} });
+
+  q('#menu-suggestions')?.addEventListener('click', async () => {
+    S.showMenu = false; S.screen = 'suggestions';
+    S.suggestionError = null; S.suggestionSuccess = false;
+    await loadSuggestions(); render();
+  });
+  q('#menu-roadmap')?.addEventListener('click', () => { S.showMenu = false; render(); }); // placeholder
+  q('#menu-changelog')?.addEventListener('click', () => { S.showMenu = false; render(); }); // placeholder
+
+  q('#back-from-suggestions')?.addEventListener('click', () => {
+    S.screen = S.authUser ? 'crew-list' : 'login'; render();
+  });
+
+  q('#do-submit-suggestion')?.addEventListener('click', async () => {
+    const title = q('#sug-title')?.value.trim();
+    if (!title) { S.suggestionError = 'Please enter a title.'; render(); return; }
+    S.suggestionLoading = true; S.suggestionError = null; S.suggestionSuccess = false; render();
+    try {
+      await withTimeout((async () => {
+        const { error } = await sb.from('suggestions').insert({
+          user_id: S.authUser.id,
+          display_name: S.userProfile?.display_name || 'Anonymous',
+          title,
+          description: q('#sug-desc')?.value.trim() || null
+        });
+        if (error) throw error;
+        S.suggestionSuccess = true;
+        if (q('#sug-title')) q('#sug-title').value = '';
+        if (q('#sug-desc')) q('#sug-desc').value = '';
+        await loadSuggestions();
+      })());
+    } catch(e) { S.suggestionError = 'Something went wrong. Please try again.'; }
+    S.suggestionLoading = false; render();
+  });
+
+  document.querySelectorAll('.upvote-btn[data-sug-id]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!S.authUser) return;
+      const id = btn.dataset.sugId;
+      const voted = S.myUpvotes.has(id);
+      if (voted) {
+        await sb.from('suggestion_upvotes').delete().eq('suggestion_id', id).eq('user_id', S.authUser.id);
+        await sb.from('suggestions').update({ upvotes: (S.suggestions.find(s=>s.id===id)?.upvotes||1)-1 }).eq('id', id);
+        S.myUpvotes.delete(id);
+      } else {
+        await sb.from('suggestion_upvotes').insert({ suggestion_id: id, user_id: S.authUser.id });
+        await sb.from('suggestions').update({ upvotes: (S.suggestions.find(s=>s.id===id)?.upvotes||0)+1 }).eq('id', id);
+        S.myUpvotes.add(id);
+      }
+      await loadSuggestions(); render();
+    });
   });
   // ── Auth ──
   q('#send-magic-link')?.addEventListener('click',async()=>{

@@ -401,9 +401,13 @@ async function enterCrew(group, member) {
   S.group = group; S.currentMember = member;
   S.screen = 'group'; S.activeTab = 'events';
   S.loading = true; render();
-  const { data: members } = await sb.from('members').select('*').eq('group_id', group.id);
-  S.members = members || [];
-  await loadAll();
+  try{
+    await withTimeout((async()=>{
+      const{data:members}=await sb.from('members').select('*').eq('group_id',group.id);
+      S.members=members||[];
+      await loadAll();
+    })());
+  }catch(e){S.error='Something went wrong. Please try again.';}
   S.loading = false; render();
 }
 
@@ -1128,6 +1132,8 @@ function calDays(offset){
 }
 function monthLabel(offset){const now=new Date();return new Date(now.getFullYear(),now.getMonth()+offset,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});}
 
+const withTimeout=(p,ms=15000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]);
+
 // ── Event handlers ────────────────────────────────────────────────────────────
 function attachEvents(){
   // ── Auth ──
@@ -1135,9 +1141,12 @@ function attachEvents(){
     const email=q('#auth-email')?.value.trim();
     if(!email){S.error='Please enter your email.';render();return;}
     S.loading=true;S.error=null;render();
-    const{error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:'https://greentime-two.vercel.app'}});
-    if(error){S.error=error.message;S.loading=false;render();return;}
-    S._sentEmail=email;S.screen='check-email';S.loading=false;render();
+    try{
+      const{error}=await withTimeout(sb.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:'https://greentime-two.vercel.app'}}));
+      if(error){S.error=error.message;S.loading=false;render();return;}
+      S._sentEmail=email;S.screen='check-email';
+    }catch(e){S.error='Something went wrong. Please try again.';}
+    S.loading=false;render();
   });
 
   q('#back-to-login')?.addEventListener('click',()=>{S.screen='login';S.error=null;render();});
@@ -1148,12 +1157,14 @@ function attachEvents(){
     if(!name){S.error='Please enter your name.';render();return;}
     S.loading=true;S.error=null;render();
     try{
-      await sb.rpc('upsert_user_profile',{p_display_name:name});
-      const{data:profile}=await sb.from('user_profiles').select('*').eq('id',S.authUser.id).single();
-      S.userProfile=profile;
-      await loadMyCrews();
-      S.screen='crew-list';
-    }catch(e){S.error='Could not save profile. Please try again.';}
+      await withTimeout((async()=>{
+        await sb.rpc('upsert_user_profile',{p_display_name:name});
+        const{data:profile}=await sb.from('user_profiles').select('*').eq('id',S.authUser.id).single();
+        S.userProfile=profile;
+        await loadMyCrews();
+        S.screen='crew-list';
+      })());
+    }catch(e){S.error='Something went wrong. Please try again.';}
     S.loading=false;render();
   });
 
@@ -1185,27 +1196,33 @@ function attachEvents(){
     if(!val){S.locInputError='Please enter a location.';render();return;}
     S.loading=true;render();
     try{
-      const resp=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=1`,{headers:{'Accept-Language':'en'}});
-      const results=await resp.json();
-      if(!results?.length){S.locInputError=`Could not find "${val}". Try being more specific.`;S.loading=false;render();return;}
-      const top=results[0];
-      const lat=parseFloat(top.lat),lng=parseFloat(top.lon);
-      const parts=top.display_name.split(',').map(p=>p.trim());
-      const label=parts.slice(0,2).join(', ');
-      await sb.rpc('upsert_user_profile',{p_display_name:S.userProfile.display_name,p_home_lat:lat,p_home_lng:lng,p_home_label:label});
-      S.userProfile={...S.userProfile,home_lat:lat,home_lng:lng,home_label:label};
-      S.locInputError=null;
-    }catch(e){S.locInputError='Geocoding failed. Check your connection.';}
+      await withTimeout((async()=>{
+        const resp=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=1`,{headers:{'Accept-Language':'en'}});
+        const results=await resp.json();
+        if(!results?.length){S.locInputError=`Could not find "${val}". Try being more specific.`;S.loading=false;render();return;}
+        const top=results[0];
+        const lat=parseFloat(top.lat),lng=parseFloat(top.lon);
+        const parts=top.display_name.split(',').map(p=>p.trim());
+        const label=parts.slice(0,2).join(', ');
+        await sb.rpc('upsert_user_profile',{p_display_name:S.userProfile.display_name,p_home_lat:lat,p_home_lng:lng,p_home_label:label});
+        S.userProfile={...S.userProfile,home_lat:lat,home_lng:lng,home_label:label};
+        S.locInputError=null;
+      })());
+    }catch(e){S.locInputError='Something went wrong. Please try again.';}
     S.loading=false;render();
   });
 
   q('#save-profile-loc-gps')?.addEventListener('click',()=>{
     S.loading=true;render();
     navigator.geolocation.getCurrentPosition(async pos=>{
-      const lat=pos.coords.latitude,lng=pos.coords.longitude;
-      const label=await reverseGeocode(lat,lng);
-      await sb.rpc('upsert_user_profile',{p_display_name:S.userProfile.display_name,p_home_lat:lat,p_home_lng:lng,p_home_label:label});
-      S.userProfile={...S.userProfile,home_lat:lat,home_lng:lng,home_label:label};
+      try{
+        await withTimeout((async()=>{
+          const lat=pos.coords.latitude,lng=pos.coords.longitude;
+          const label=await reverseGeocode(lat,lng);
+          await sb.rpc('upsert_user_profile',{p_display_name:S.userProfile.display_name,p_home_lat:lat,p_home_lng:lng,p_home_label:label});
+          S.userProfile={...S.userProfile,home_lat:lat,home_lng:lng,home_label:label};
+        })());
+      }catch(e){S.locInputError='Something went wrong. Please try again.';}
       S.loading=false;render();
     },()=>{S.locInputError='GPS denied.';S.loading=false;render();});
   });
@@ -1276,14 +1293,16 @@ function attachEvents(){
     if(!user){S.error='Please enter your name.';render();return;}
     S.loading=true;S.error=null;render();
     try{
-      const{data:grp,error:e1}=await sb.from('groups').select('*').eq('invite_code',code).single();
-      if(e1||!grp){S.error='Group not found. Check the code.';S.loading=false;render();return;}
-      const{data:mem,error:e2}=await sb.from('members').insert({group_id:grp.id,name:user,is_admin:false}).select().single();if(e2)throw e2;
-      const{data:members}=await sb.from('members').select('*').eq('group_id',grp.id);
-      S.group=grp;S.members=members||[];S.currentMember=mem;
-      S.isGuest=true;S.screen='group';S.activeTab='events';
-      location.hash='';saveGuestSession();await loadAll();
-    }catch(e){S.error='Could not join. Please try again.';}
+      await withTimeout((async()=>{
+        const{data:grp,error:e1}=await sb.from('groups').select('*').eq('invite_code',code).single();
+        if(e1||!grp){S.error='Group not found. Check the code.';S.loading=false;render();return;}
+        const{data:mem,error:e2}=await sb.from('members').insert({group_id:grp.id,name:user,is_admin:false}).select().single();if(e2)throw e2;
+        const{data:members}=await sb.from('members').select('*').eq('group_id',grp.id);
+        S.group=grp;S.members=members||[];S.currentMember=mem;
+        S.isGuest=true;S.screen='group';S.activeTab='events';
+        location.hash='';saveGuestSession();await loadAll();
+      })());
+    }catch(e){S.error='Something went wrong. Please try again.';}
     S.loading=false;render();
   });
 
@@ -1353,26 +1372,33 @@ function attachEvents(){
     if(!val){S.locInputError='Please enter a location.';render();return;}
     S.loading=true;S.locInputError=null;render();
     try{
-      const resp=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=1`,{headers:{'Accept-Language':'en'}});
-      const results=await resp.json();
-      if(!results?.length){S.locInputError=`Could not find "${val}".`;S.loading=false;render();return;}
-      const top=results[0];
-      const lat=parseFloat(top.lat),lng=parseFloat(top.lon);
-      const parts=top.display_name.split(',').map(p=>p.trim());
-      const label=parts.slice(0,2).join(', ');
-      await saveLocation(lat,lng,label);
-      S.showLocInput=false;
-    }catch(e){S.locInputError='Geocoding failed.';}
+      await withTimeout((async()=>{
+        const resp=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=1`,{headers:{'Accept-Language':'en'}});
+        const results=await resp.json();
+        if(!results?.length){S.locInputError=`Could not find "${val}".`;S.loading=false;render();return;}
+        const top=results[0];
+        const lat=parseFloat(top.lat),lng=parseFloat(top.lon);
+        const parts=top.display_name.split(',').map(p=>p.trim());
+        const label=parts.slice(0,2).join(', ');
+        await saveLocation(lat,lng,label);
+        S.showLocInput=false;
+      })());
+    }catch(e){S.locInputError='Something went wrong. Please try again.';}
     S.loading=false;render();
   });
 
   q('#set-location-gps')?.addEventListener('click',()=>{
     S.loading=true;render();
     navigator.geolocation.getCurrentPosition(async pos=>{
-      const lat=pos.coords.latitude,lng=pos.coords.longitude;
-      const label=await reverseGeocode(lat,lng);
-      await saveLocation(lat,lng,label);
-      S.showLocInput=false;S.loading=false;render();
+      try{
+        await withTimeout((async()=>{
+          const lat=pos.coords.latitude,lng=pos.coords.longitude;
+          const label=await reverseGeocode(lat,lng);
+          await saveLocation(lat,lng,label);
+          S.showLocInput=false;
+        })());
+      }catch(e){S.locInputError='Something went wrong. Please try again.';}
+      S.loading=false;render();
     },()=>{S.locInputError='GPS denied. Try typing your location.';S.loading=false;render();});
   });
 
@@ -1389,9 +1415,11 @@ function attachEvents(){
     if(!time){S.error='Please pick a tee time.';render();return;}
     S.loading=true;S.error=null;render();
     try{
-      const{error:e}=await sb.from('events').insert({group_id:S.group.id,created_by:S.currentMember.id,course_name:course,event_date:date,tee_time:time,spots,greens_fee:fee,cutoff_hours:cutoff});
-      if(e)throw e;S.showCreateEvent=false;await loadEvents();
-    }catch(e){S.error='Could not create event.';}
+      await withTimeout((async()=>{
+        const{error:e}=await sb.from('events').insert({group_id:S.group.id,created_by:S.currentMember.id,course_name:course,event_date:date,tee_time:time,spots,greens_fee:fee,cutoff_hours:cutoff});
+        if(e)throw e;S.showCreateEvent=false;await loadEvents();
+      })());
+    }catch(e){S.error='Something went wrong. Please try again.';}
     S.loading=false;render();
   });
 
@@ -1440,7 +1468,12 @@ function attachEvents(){
   q('#copy-link')?.addEventListener('click',()=>{navigator.clipboard?.writeText(`${location.origin}${location.pathname}#join=${S.group.invite_code}`);showCopied();});
 
   // Refresh
-  q('#refresh-btn')?.addEventListener('click',async()=>{S.loading=true;render();await loadAll();if(S.authUser)await loadMyCrews();S.loading=false;render();});
+  q('#refresh-btn')?.addEventListener('click',async()=>{
+    S.loading=true;render();
+    try{await withTimeout((async()=>{await loadAll();if(S.authUser)await loadMyCrews();})());}
+    catch(e){S.error='Something went wrong. Please try again.';}
+    S.loading=false;render();
+  });
 
   // Leave (guest only)
   q('#leave-group')?.addEventListener('click',()=>{

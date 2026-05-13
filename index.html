@@ -970,7 +970,7 @@ function eventCardHTML(event,isPast=false){
     </div>
     ${!isPast?`<div style="font-size:11px;color:var(--muted);margin-top:6px">Bail cutoff: ${event.cutoff_hours}h before${event.greens_fee?` · $${Number(event.greens_fee).toFixed(0)} owed if late bail`:''}</div>`:''}
     ${event.notes?`<div style="font-size:12px;color:var(--muted);margin-top:6px;font-style:italic">${event.notes}</div>`:''}
-    ${!isPast && myRsvp(event.id)?.status==='in' && S.myAvailability.some(r=>r.avail_date===event.event_date)
+    ${!isPast && myRsvp(event.id)?.auto_rsvp === true
   ? `<div style="font-size:11px;background:var(--green-pale);color:var(--green);border-radius:7px;padding:5px 9px;margin-top:6px">✓ Auto-RSVPed based on your availability</div>`
   : ''}
     ${S.currentMember?.is_admin&&!isPast?`<div style="display:flex;gap:6px;margin-top:10px">
@@ -1611,6 +1611,7 @@ function attachEvents(){
               member_id: mid,
               group_id: S.group.id,
               status: 'in',
+              auto_rsvp: true,
               confirmed_at: new Date().toISOString()
             }));
             await sb.from('rsvps').insert(autoRsvps);

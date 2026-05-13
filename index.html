@@ -325,18 +325,24 @@ let S = {
 // This fires on page load (restores session) and on magic link callback
 sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_IN' && session) {
-    S.authUser = session.user;
-    S.isGuest  = false;
-    // Check if profile exists
-    const { data: profile } = await sb.from('user_profiles')
-      .select('*').eq('id', session.user.id).single();
-    if (profile) {
-      S.userProfile = profile;
-      await loadMyCrews();
-      S.screen = S.myCrews.length > 0 ? 'crew-list' : 'crew-list';
-    } else {
-      // First login — need to set up profile
-      S.screen = 'setup-profile';
+    const signInTimer = new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000));
+    try {
+      await Promise.race([signInTimer, (async()=>{
+        S.authUser = session.user;
+        S.isGuest  = false;
+        const { data: profile } = await sb.from('user_profiles')
+          .select('*').eq('id', session.user.id).single();
+        if (profile) {
+          S.userProfile = profile;
+          await loadMyCrews();
+          S.screen = S.myCrews.length > 0 ? 'crew-list' : 'crew-list';
+        } else {
+          S.screen = 'setup-profile';
+        }
+      })()]);
+    } catch(e) {
+      S.screen = 'login';
+      S.error = 'Session restore failed. Please sign in again.';
     }
     S.loading = false;
     render();

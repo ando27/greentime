@@ -297,7 +297,7 @@ let S = {
 
   // Events
   events: [], rsvps: [], bails: [],
-  showCreateEvent: false,
+  showCreateEvent: false, editingEvent: null,
 
   // Availability
   myAvailability: [], groupAvailability: [],
@@ -813,24 +813,26 @@ function eventsTabHTML(){
   `;}
 
 function createEventFormHTML(){
+  const ev=S.editingEvent;
   const favs=getFavorites();
   const favOptions=favs.length>0?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${favs.map(f=>`<button class="radius-pill" data-fav-course="${f.name}">${f.name}</button>`).join('')}</div>`:'';
   return `<div class="card">
-    <div class="card-title"><span class="dot"></span>Schedule a Tee Time</div>
-    ${favs.length>0?`<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Quick-fill from favorites:</div>${favOptions}`:''}
-    <div class="input-group"><label>Course name</label><input id="ev-course" type="text" placeholder="e.g. Bethpage Black" maxlength="60"/></div>
+    <div class="card-title"><span class="dot"></span>${ev?'Edit Event':'Schedule a Tee Time'}</div>
+    ${!ev&&favs.length>0?`<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Quick-fill from favorites:</div>${favOptions}`:''}
+    <div class="input-group"><label>Course name</label><input id="ev-course" type="text" placeholder="e.g. Bethpage Black" maxlength="60" value="${ev?ev.course_name:''}"/></div>
     <div class="input-row">
-      <div><label>Date</label><input id="ev-date" type="date" min="${todayYMD()}"/></div>
-      <div><label>Tee time</label><input id="ev-time" type="time"/></div>
+      <div><label>Date</label><input id="ev-date" type="date" min="${todayYMD()}" value="${ev?ev.event_date:''}"/></div>
+      <div><label>Tee time</label><input id="ev-time" type="time" value="${ev?ev.tee_time:''}"/></div>
     </div>
     <div class="input-row">
-      <div><label>Spots</label><input id="ev-spots" type="number" min="1" max="20" value="4"/></div>
-      <div><label>Greens fee ($)</label><input id="ev-fee" type="number" min="0" placeholder="optional"/></div>
+      <div><label>Spots</label><input id="ev-spots" type="number" min="1" max="20" value="${ev?ev.spots:'4'}"/></div>
+      <div><label>Greens fee ($)</label><input id="ev-fee" type="number" min="0" placeholder="optional" value="${ev&&ev.greens_fee!=null?ev.greens_fee:''}"/></div>
     </div>
-    <div class="input-group"><label>Bail cutoff (hours)</label><input id="ev-cutoff" type="number" min="1" max="72" value="24"/></div>
+    <div class="input-group"><label>Bail cutoff (hours)</label><input id="ev-cutoff" type="number" min="1" max="72" value="${ev?ev.cutoff_hours:'24'}"/></div>
+    <div class="input-group"><label>Notes <span style="color:var(--muted);font-size:11px">(optional)</span></label><input id="ev-notes" type="text" placeholder="e.g. hitting the range first" maxlength="120" value="${ev&&ev.notes?ev.notes:''}"/></div>
     ${S.error?`<div class="banner banner-error">${S.error}</div>`:''}
     <div style="display:flex;gap:8px">
-      <button class="btn btn-primary" id="do-create-event" ${S.loading?'disabled':''}>${S.loading?'<span class="spinner"></span> Saving…':'Create Event'}</button>
+      <button class="btn btn-primary" id="do-create-event" ${S.loading?'disabled':''}>${S.loading?'<span class="spinner"></span> Saving…':ev?'Save Changes':'Create Event'}</button>
       <button class="btn btn-secondary" id="cancel-create-event" style="width:auto;padding:11px 16px">Cancel</button>
     </div>
   </div>`;}
@@ -859,6 +861,11 @@ function eventCardHTML(event,isPast=false){
       </div>`:''}
     </div>
     ${!isPast?`<div style="font-size:11px;color:var(--muted);margin-top:6px">Bail cutoff: ${event.cutoff_hours}h before${event.greens_fee?` · $${Number(event.greens_fee).toFixed(0)} owed if late bail`:''}</div>`:''}
+    ${event.notes?`<div style="font-size:12px;color:var(--muted);margin-top:6px;font-style:italic">${event.notes}</div>`:''}
+    ${S.currentMember?.is_admin&&!isPast?`<div style="display:flex;gap:6px;margin-top:10px">
+      <button class="btn btn-sm btn-secondary" data-edit-event="${event.id}">Edit</button>
+      <button class="btn btn-sm btn-out" data-cancel-event="${event.id}">Cancel Event</button>
+    </div>`:''}
   </div>`;}
 
 // ── Tab: Courses ──────────────────────────────────────────────────────────────
@@ -1403,21 +1410,28 @@ function attachEvents(){
   });
 
   // Events
-  q('#show-create-event')?.addEventListener('click',()=>{S.showCreateEvent=true;S.error=null;render();});
-  q('#cancel-create-event')?.addEventListener('click',()=>{S.showCreateEvent=false;S.error=null;render();});
+  q('#show-create-event')?.addEventListener('click',()=>{S.showCreateEvent=true;S.editingEvent=null;S.error=null;render();});
+  q('#cancel-create-event')?.addEventListener('click',()=>{S.showCreateEvent=false;S.editingEvent=null;S.error=null;render();});
 
   q('#do-create-event')?.addEventListener('click',async()=>{
     const course=q('#ev-course')?.value.trim(),date=q('#ev-date')?.value,time=q('#ev-time')?.value;
     const spots=parseInt(q('#ev-spots')?.value||'4'),fee=q('#ev-fee')?.value?parseFloat(q('#ev-fee').value):null;
     const cutoff=parseInt(q('#ev-cutoff')?.value||'24');
+    const notes=q('#ev-notes')?.value.trim()||null;
     if(!course){S.error='Please enter a course name.';render();return;}
     if(!date){S.error='Please pick a date.';render();return;}
     if(!time){S.error='Please pick a tee time.';render();return;}
     S.loading=true;S.error=null;render();
     try{
       await withTimeout((async()=>{
-        const{error:e}=await sb.from('events').insert({group_id:S.group.id,created_by:S.currentMember.id,course_name:course,event_date:date,tee_time:time,spots,greens_fee:fee,cutoff_hours:cutoff});
-        if(e)throw e;S.showCreateEvent=false;await loadEvents();
+        if(S.editingEvent){
+          const{error:e}=await sb.from('events').update({course_name:course,event_date:date,tee_time:time,spots,greens_fee:fee,cutoff_hours:cutoff,notes}).eq('id',S.editingEvent.id);
+          if(e)throw e;
+        }else{
+          const{error:e}=await sb.from('events').insert({group_id:S.group.id,created_by:S.currentMember.id,course_name:course,event_date:date,tee_time:time,spots,greens_fee:fee,cutoff_hours:cutoff,notes});
+          if(e)throw e;
+        }
+        S.showCreateEvent=false;S.editingEvent=null;await loadEvents();
       })());
     }catch(e){S.error='Something went wrong. Please try again.';}
     S.loading=false;render();
@@ -1436,6 +1450,29 @@ function attachEvents(){
       if(existing){await sb.from('rsvps').update({status:action,confirmed_at:action==='in'?new Date().toISOString():existing.confirmed_at,updated_at:new Date().toISOString()}).eq('id',existing.id);}
       else{await sb.from('rsvps').insert({event_id:eventId,member_id:S.currentMember.id,group_id:S.group.id,status:action,confirmed_at:action==='in'?new Date().toISOString():null});}
       await loadEvents();render();
+    });
+  });
+
+  // Edit event (admin)
+  document.querySelectorAll('[data-edit-event]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const ev=S.events.find(e=>e.id===btn.dataset.editEvent);
+      if(ev){S.editingEvent=ev;S.showCreateEvent=true;S.error=null;render();}
+    });
+  });
+
+  // Cancel event (admin)
+  document.querySelectorAll('[data-cancel-event]').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      if(!confirm('Cancel this event? This cannot be undone.'))return;
+      try{
+        await withTimeout((async()=>{
+          const{error:e}=await sb.from('events').delete().eq('id',btn.dataset.cancelEvent);
+          if(e)throw e;
+          await loadEvents();
+        })());
+      }catch(e){S.error='Something went wrong. Please try again.';}
+      render();
     });
   });
 

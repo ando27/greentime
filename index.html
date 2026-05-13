@@ -349,7 +349,13 @@ sb.auth.onAuthStateChange(async (event, session) => {
     // No active session — check if guest session exists
     const guestSession = JSON.parse(localStorage.getItem('gt_guest_v3') || 'null');
     if (guestSession?.groupId && guestSession?.memberId) {
-      await restoreGuestSession(guestSession);
+      const sessionTimer = new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000));
+      try {
+        await Promise.race([sessionTimer, restoreGuestSession(guestSession)]);
+      } catch(e) {
+        clearGuestSession();
+        S.screen = 'login';
+      }
     } else {
       S.screen = 'login';
     }

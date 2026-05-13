@@ -398,6 +398,7 @@ async function loadMyCrews() {
 
 // ── Enter a specific crew ─────────────────────────────────────────────────────
 async function enterCrew(group, member) {
+  console.log('enterCrew start');
   S.group = group; S.currentMember = member;
   S.screen = 'group'; S.activeTab = 'events';
   S.loading = true; render();
@@ -407,14 +408,16 @@ async function enterCrew(group, member) {
       S.members=members||[];
       await loadAll();
     })());
-  }catch(e){S.error='Something went wrong. Please try again.';}
+  }catch(e){console.error('enterCrew error:',e);S.error='Something went wrong. Please try again.';}
   S.loading = false; render();
+  console.log('enterCrew done');
 }
 
 // ── Data loaders ──────────────────────────────────────────────────────────────
 async function loadAll() { await Promise.all([loadEvents(), loadAvailability()]); }
 
 async function loadEvents() {
+  console.log('loadEvents start');
   const gid = S.group.id;
   const [{ data: events },{ data: rsvps },{ data: bails }] = await Promise.all([
     sb.from('events').select('*').eq('group_id',gid).order('event_date',{ascending:true}),
@@ -422,12 +425,15 @@ async function loadEvents() {
     sb.from('bail_log').select('*').eq('group_id',gid).order('bailed_at',{ascending:false})
   ]);
   S.events=events||[]; S.rsvps=rsvps||[]; S.bails=bails||[];
+  console.log('loadEvents done');
 }
 
 async function loadAvailability() {
+  console.log('loadAvailability start');
   const { data } = await sb.from('availability').select('*').eq('group_id',S.group.id);
   S.groupAvailability = data||[];
   S.myAvailability = S.groupAvailability.filter(r=>r.member_id===S.currentMember.id);
+  console.log('loadAvailability done');
 }
 
 async function refreshGroup() {

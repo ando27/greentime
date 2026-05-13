@@ -35,6 +35,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .logo-icon svg{width:19px;height:19px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .logo-text{font-family:'Playfair Display',serif;font-size:23px;color:var(--text)}
 .tagline{color:var(--muted);font-size:12px}
+.hamburger-btn{
+  position:absolute;top:28px;right:0;
+  background:transparent;border:1.5px solid var(--border);
+  border-radius:8px;width:34px;height:34px;
+  font-size:16px;cursor:pointer;color:var(--text);
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
+}
+.hamburger-btn:hover{border-color:var(--green);color:var(--green)}
 
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:13px;box-shadow:var(--shadow)}
 .card-title{font-size:14px;font-weight:600;margin-bottom:13px;display:flex;align-items:center;gap:8px}
@@ -587,6 +596,7 @@ function html(){
   if(S.screen==='loading') return `<div style="text-align:center;padding:80px 20px"><div class="spinner spinner-dark" style="margin:0 auto 12px"></div><div style="font-size:13px;color:var(--muted)">Loading…</div></div>`;
   return `
     <div class="header">
+      <button class="hamburger-btn" id="open-menu">☰</button>
       <div class="logo"><div class="logo-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 3"/></svg></div>
       <span class="logo-text">GreenTime</span></div>
       <div class="tagline">Find when your crew can play</div>
@@ -1161,6 +1171,9 @@ const withTimeout=(p,ms=15000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(
 
 // ── Event handlers ────────────────────────────────────────────────────────────
 function attachEvents(){
+  q('#open-menu')?.addEventListener('click', () => {
+    console.log('menu clicked');
+  });
   // ── Auth ──
   q('#send-magic-link')?.addEventListener('click',async()=>{
     const email=q('#auth-email')?.value.trim();

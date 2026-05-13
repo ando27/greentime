@@ -596,11 +596,11 @@ function html(){
   if(S.screen==='loading') return `<div style="text-align:center;padding:80px 20px"><div class="spinner spinner-dark" style="margin:0 auto 12px"></div><div style="font-size:13px;color:var(--muted)">Loading…</div></div>`;
   return `
     <div class="header">
-      <button class="hamburger-btn" id="open-menu">☰</button>
-      <div class="logo"><div class="logo-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 3"/></svg></div>
-      <span class="logo-text">GreenTime</span></div>
-      <div class="tagline">Find when your crew can play</div>
-    </div>
+  <button class="hamburger-btn" id="open-menu">☰</button>
+  <div class="logo"><div class="logo-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 3"/></svg></div>
+  <span class="logo-text">GreenTime</span></div>
+  <div class="tagline">Find when your crew can play</div>
+</div>
     ${S.screen==='login'         ? loginHTML()        : ''}
     ${S.screen==='check-email'   ? checkEmailHTML()   : ''}
     ${S.screen==='setup-profile' ? setupProfileHTML() : ''}

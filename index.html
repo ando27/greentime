@@ -1218,17 +1218,24 @@ function attachEvents(){
     const name=q('#grp-name')?.value.trim();
     if(!name){S.error='Please enter a crew name.';render();return;}
     S.loading=true;S.error=null;render();
+    const timer=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),15000));
     try{
-      const{data:grp,error:e1}=await sb.from('groups').insert({name,invite_code:genCode()}).select().single();if(e1)throw e1;
-      const loc=S.userProfile;
-      const{data:mem,error:e2}=await sb.from('members').insert({
-        group_id:grp.id,name:S.userProfile.display_name,is_admin:true,
-        user_id:S.authUser.id,
-        home_lat:loc?.home_lat||null,home_lng:loc?.home_lng||null,home_label:loc?.home_label||null
-      }).select().single();if(e2)throw e2;
-      await loadMyCrews();
-      await enterCrew(grp,mem);
-    }catch(e){console.error('create crew error:',e);S.error='Could not create crew: '+(e?.message||JSON.stringify(e));S.loading=false;render();return;}
+      await Promise.race([timer,(async()=>{
+        const{data:grp,error:e1}=await sb.from('groups').insert({name,invite_code:genCode()}).select().single();if(e1)throw e1;
+        const loc=S.userProfile;
+        const{data:mem,error:e2}=await sb.from('members').insert({
+          group_id:grp.id,name:S.userProfile.display_name,is_admin:true,
+          user_id:S.authUser.id,
+          home_lat:loc?.home_lat||null,home_lng:loc?.home_lng||null,home_label:loc?.home_label||null
+        }).select().single();if(e2)throw e2;
+        await loadMyCrews();
+        await enterCrew(grp,mem);
+      })()]);
+    }catch(e){
+      console.error('create crew error:',e);
+      S.error='Something went wrong. Please try again.';
+      S.loading=false;render();return;
+    }
     S.loading=false;render();
   });
 
@@ -1237,19 +1244,25 @@ function attachEvents(){
     const code=q('#join-code-auth')?.value.trim().toUpperCase();
     if(!code||code.length!==6){S.error='Please enter the 6-character code.';render();return;}
     S.loading=true;S.error=null;render();
+    const timer=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),15000));
     try{
-      const{data:grp,error:e1}=await sb.from('groups').select('*').eq('invite_code',code).single();
-      if(e1||!grp){S.error='Group not found. Check the code.';S.loading=false;render();return;}
-      const loc=S.userProfile;
-      const{data:mem,error:e2}=await sb.from('members').insert({
-        group_id:grp.id,name:S.userProfile.display_name,is_admin:false,
-        user_id:S.authUser.id,
-        home_lat:loc?.home_lat||null,home_lng:loc?.home_lng||null,home_label:loc?.home_label||null
-      }).select().single();if(e2)throw e2;
-      location.hash='';
-      await loadMyCrews();
-      await enterCrew(grp,mem);
-    }catch(e){S.error='Could not join. Please try again.';}
+      await Promise.race([timer,(async()=>{
+        const{data:grp,error:e1}=await sb.from('groups').select('*').eq('invite_code',code).single();
+        if(e1||!grp){S.error='Group not found. Check the code.';S.loading=false;render();return;}
+        const loc=S.userProfile;
+        const{data:mem,error:e2}=await sb.from('members').insert({
+          group_id:grp.id,name:S.userProfile.display_name,is_admin:false,
+          user_id:S.authUser.id,
+          home_lat:loc?.home_lat||null,home_lng:loc?.home_lng||null,home_label:loc?.home_label||null
+        }).select().single();if(e2)throw e2;
+        location.hash='';
+        await loadMyCrews();
+        await enterCrew(grp,mem);
+      })()]);
+    }catch(e){
+      S.error='Something went wrong. Please try again.';
+      S.loading=false;render();return;
+    }
     S.loading=false;render();
   });
 

@@ -34,33 +34,25 @@ function haversineDistance(
 }
 
 async function geocode(query: string): Promise<{ lat: number; lng: number } | null> {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
-  const res = await fetch(url, {
-    headers: { "Accept-Language": "en", "User-Agent": "greentime-app/1.0" },
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  if (!data.length) return null;
-  return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+    const res = await fetch(url, { headers: { "Accept-Language": "en" } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.length) return null;
+    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  } catch {
+    return null;
+  }
 }
 
 async function fetchNearbyCourses(lat: number, lng: number): Promise<CourseItem[]> {
-  const query = `
-    [out:json][timeout:25];
-    (
-      node["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});
-      way["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});
-      relation["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});
-    );
-    out center tags;
-  `.trim();
+  const query = `[out:json][timeout:25];(node["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});way["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});relation["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng}););out center tags;`;
 
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    body: query,
-    headers: { "Content-Type": "text/plain" },
-  });
-  if (!res.ok) throw new Error("Overpass API error");
+  const res = await fetch(
+    `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`
+  );
+  if (!res.ok) throw new Error(`Overpass error ${res.status}`);
   const data = await res.json();
 
   return (data.elements as Array<Record<string, unknown>>)

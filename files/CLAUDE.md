@@ -280,4 +280,7 @@ Bail is only triggered when status flips from 'in' → 'out' within `cutoff_hour
 Labels were changed from AM/PM/Eve to Morning/Afternoon/Twilight. If any existing availability rows in Supabase still use 'morning'/'afternoon'/'evening' as the `time_of_day` value, the display labels are purely cosmetic — the DB values stay the same.
 
 **Member cards:**
-Members tab shows name, admin badge, home location, and bail count. Handicap is not yet implemented — a new column on the `members` table will be needed before that can be built.
+Members tab shows name, admin badge, home location, and bail count. Cards are buttons — tapping expands an inline detail row if the member has location or bail data. Handicap is not yet implemented — a new column on the `members` table will be needed before that can be built.
+
+**Member cards bail count bug (fixed):**
+The original implementation fetched `bail_log` by `group_id` on the client, which returned empty rows due to RLS (policy only permits reads filtered by `event_id`). Fixed by passing the already-loaded `bailLog` state from `CrewDetail` directly to `MembersTab` and computing counts from it — no extra query needed.

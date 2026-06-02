@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -247,7 +247,7 @@ export default function CrewDetail({
         )}
 
         {tab === "members" && (
-          <MembersTab members={initialMembers} inviteCode={group.invite_code} />
+          <MembersTab members={initialMembers} inviteCode={group.invite_code} groupId={group.id} />
         )}
 
         {tab === "availability" && (
@@ -479,11 +479,31 @@ function EventsTab({
 function MembersTab({
   members,
   inviteCode,
+  groupId,
 }: {
   members: DBMember[];
   inviteCode: string;
+  groupId: string;
 }) {
+  const supabase = createClient();
   const [copied, setCopied] = useState(false);
+  const [bailCounts, setBailCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    supabase
+      .from("bail_log")
+      .select("member_id")
+      .eq("group_id", groupId)
+      .then(({ data }) => {
+        if (!data) return;
+        const counts: Record<string, number> = {};
+        for (const row of data) {
+          counts[row.member_id] = (counts[row.member_id] ?? 0) + 1;
+        }
+        setBailCounts(counts);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId]);
 
   function handleCopy() {
     navigator.clipboard.writeText(inviteCode).then(() => {
@@ -518,19 +538,32 @@ function MembersTab({
 
       {/* Member list */}
       <div className="flex flex-col gap-2">
-        {members.map((m) => (
-          <div
-            key={m.id}
-            className="bg-[#0f2018] border border-[#2d5040] rounded-xl px-4 py-3 flex items-center justify-between"
-          >
-            <span className="text-white text-sm font-medium">{m.name}</span>
-            {m.is_admin && (
-              <span className="text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#4ade80]/10 border border-[#4ade80]/25 text-[#4ade80]">
-                Admin
-              </span>
-            )}
-          </div>
-        ))}
+        {members.map((m) => {
+          const bails = bailCounts[m.id] ?? 0;
+          return (
+            <div
+              key={m.id}
+              className="bg-[#0f2018] border border-[#2d5040] rounded-xl px-4 py-3 flex items-center justify-between gap-3"
+            >
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <span className="text-white text-sm font-medium">{m.name}</span>
+                {m.home_label && (
+                  <span className="text-[#4d7a5d] text-xs truncate">{m.home_label}</span>
+                )}
+                {bails > 0 && (
+                  <span className="text-white/50 text-xs">
+                    🚩 {bails} {bails === 1 ? "bail" : "bails"}
+                  </span>
+                )}
+              </div>
+              {m.is_admin && (
+                <span className="shrink-0 text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#4ade80]/10 border border-[#4ade80]/25 text-[#4ade80]">
+                  Admin
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

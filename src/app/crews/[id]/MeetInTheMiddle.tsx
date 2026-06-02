@@ -81,21 +81,9 @@ const SEARCH_RADIUS_M = Math.round(25 * 1609.34);
 const MAX_RESULTS = 5;
 
 async function fetchCourses(lat: number, lng: number): Promise<CourseItem[]> {
-  const body = [
-    "[out:json][timeout:25];",
-    "(",
-    `  node["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});`,
-    `  way["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});`,
-    `  relation["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});`,
-    ");",
-    "out center tags;",
-  ].join("\n");
+  const query = `[out:json][timeout:25];(node["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});way["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});relation["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng}););out center tags;`;
 
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    body,
-    headers: { "Content-Type": "text/plain" },
-  });
+  const res = await fetch(`/api/overpass?data=${encodeURIComponent(query)}`);
   if (!res.ok) throw new Error("Overpass API error");
   const data = await res.json();
 

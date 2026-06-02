@@ -35,8 +35,8 @@ function haversineDistance(
 
 async function geocode(query: string): Promise<{ lat: number; lng: number } | null> {
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
-    const res = await fetch(url, { headers: { "Accept-Language": "en" } });
+    const url = `/api/nominatim?format=json&limit=1&q=${encodeURIComponent(query)}`;
+    const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
     if (!data.length) return null;
@@ -49,9 +49,7 @@ async function geocode(query: string): Promise<{ lat: number; lng: number } | nu
 async function fetchNearbyCourses(lat: number, lng: number): Promise<CourseItem[]> {
   const query = `[out:json][timeout:25];(node["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});way["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});relation["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng}););out center tags;`;
 
-  const res = await fetch(
-    `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`
-  );
+  const res = await fetch(`/api/overpass?data=${encodeURIComponent(query)}`);
   if (!res.ok) throw new Error(`Overpass error ${res.status}`);
   const data = await res.json();
 

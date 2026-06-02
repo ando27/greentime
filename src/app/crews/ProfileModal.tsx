@@ -53,6 +53,9 @@ export default function ProfileModal({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const locationRef = useRef<HTMLDivElement>(null);
@@ -132,6 +135,16 @@ export default function ProfileModal({
       setError("Please select a home location from the suggestions.");
       return;
     }
+    if (newPassword) {
+      if (newPassword.length < 8) {
+        setError("Password must be at least 8 characters.");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setError("Passwords don't match.");
+        return;
+      }
+    }
 
     setIsSubmitting(true);
     try {
@@ -154,6 +167,11 @@ export default function ProfileModal({
         })
         .eq("user_id", userId);
       if (memberError) throw memberError;
+
+      if (newPassword) {
+        const { error: pwError } = await supabase.auth.updateUser({ password: newPassword });
+        if (pwError) throw pwError;
+      }
 
       onSuccess({
         displayName: trimmedName,
@@ -269,6 +287,56 @@ export default function ProfileModal({
                   </li>
                 ))}
               </ul>
+            )}
+          </div>
+
+          {/* Password section */}
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setShowPassword((p) => !p);
+                setNewPassword("");
+                setConfirmPassword("");
+              }}
+              className="text-xs text-[#4d7a5d] hover:text-white/60 transition-colors text-left flex items-center gap-1.5"
+            >
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 10 10"
+                fill="none"
+                className={`transition-transform ${showPassword ? "rotate-180" : ""}`}
+              >
+                <path
+                  d="M2 3.5l3 3 3-3"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              {showPassword ? "Cancel password change" : "Set a password"}
+            </button>
+            {showPassword && (
+              <div className="flex flex-col gap-3">
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="New password"
+                  autoComplete="new-password"
+                  className={inputCls}
+                />
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm password"
+                  autoComplete="new-password"
+                  className={inputCls}
+                />
+              </div>
             )}
           </div>
 

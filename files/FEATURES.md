@@ -44,7 +44,7 @@ Last updated: 2026-05-28
 | A-03 | Guest mode | Join by code, no account | Low | ✅ Done |
 | A-04 | User profiles | Display name + home location | Low | ✅ Done |
 | A-05 | Multi-crew support | Be in multiple groups | Low | ✅ Done |
-| A-06 | Set password from profile | Magic link users can add a password | Low | ⬜ Backlog |
+| A-06 | Set password from profile | Magic link users can add a password | Low | ✅ Done |
 
 ---
 

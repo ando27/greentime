@@ -215,6 +215,7 @@ Vercel auto-deploys in ~30 seconds.
 - Bug fixes: bail log deduplication, availability persistence, heatmap real-time updates
 - Next.js Vercel deployment — live at https://greentime-app.vercel.app
 - Member cards expansion (home location, bail count per member)
+- A-06: Set password from profile modal (magic link users + password changes)
 
 ### 🟠 Up Next
 

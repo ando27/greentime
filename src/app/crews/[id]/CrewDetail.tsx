@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -247,7 +247,7 @@ export default function CrewDetail({
         )}
 
         {tab === "members" && (
-          <MembersTab members={initialMembers} inviteCode={group.invite_code} groupId={group.id} />
+          <MembersTab members={initialMembers} inviteCode={group.invite_code} bailLog={bailLog} />
         )}
 
         {tab === "availability" && (
@@ -479,31 +479,20 @@ function EventsTab({
 function MembersTab({
   members,
   inviteCode,
-  groupId,
+  bailLog,
 }: {
   members: DBMember[];
   inviteCode: string;
-  groupId: string;
+  bailLog: DBBailLog[];
 }) {
-  const supabase = createClient();
   const [copied, setCopied] = useState(false);
-  const [bailCounts, setBailCounts] = useState<Record<string, number>>({});
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    supabase
-      .from("bail_log")
-      .select("member_id")
-      .eq("group_id", groupId)
-      .then(({ data }) => {
-        if (!data) return;
-        const counts: Record<string, number> = {};
-        for (const row of data) {
-          counts[row.member_id] = (counts[row.member_id] ?? 0) + 1;
-        }
-        setBailCounts(counts);
-      });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId]);
+  // Count bails per member from the already-loaded bail log
+  const bailCounts: Record<string, number> = {};
+  for (const b of bailLog) {
+    bailCounts[b.member_id] = (bailCounts[b.member_id] ?? 0) + 1;
+  }
 
   function handleCopy() {
     navigator.clipboard.writeText(inviteCode).then(() => {
@@ -540,28 +529,57 @@ function MembersTab({
       <div className="flex flex-col gap-2">
         {members.map((m) => {
           const bails = bailCounts[m.id] ?? 0;
+          const isExpanded = expandedId === m.id;
+          const hasDetail = !!m.home_label || bails > 0;
+
           return (
-            <div
+            <button
               key={m.id}
-              className="bg-[#0f2018] border border-[#2d5040] rounded-xl px-4 py-3 flex items-center justify-between gap-3"
+              type="button"
+              onClick={() => setExpandedId(isExpanded ? null : m.id)}
+              className="w-full text-left bg-[#0f2018] border border-[#2d5040] rounded-xl px-4 py-3 hover:border-[#4d7a5d] active:scale-[0.99] transition-all"
             >
-              <div className="flex flex-col gap-0.5 min-w-0">
+              <div className="flex items-center justify-between gap-3">
                 <span className="text-white text-sm font-medium">{m.name}</span>
-                {m.home_label && (
-                  <span className="text-[#4d7a5d] text-xs truncate">{m.home_label}</span>
-                )}
-                {bails > 0 && (
-                  <span className="text-white/50 text-xs">
-                    🚩 {bails} {bails === 1 ? "bail" : "bails"}
-                  </span>
-                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {m.is_admin && (
+                    <span className="text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#4ade80]/10 border border-[#4ade80]/25 text-[#4ade80]">
+                      Admin
+                    </span>
+                  )}
+                  {hasDetail && (
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      className={`text-[#4d7a5d] transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                    >
+                      <path
+                        d="M2 4.5l4 4 4-4"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                </div>
               </div>
-              {m.is_admin && (
-                <span className="shrink-0 text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#4ade80]/10 border border-[#4ade80]/25 text-[#4ade80]">
-                  Admin
-                </span>
+
+              {isExpanded && hasDetail && (
+                <div className="mt-2 pt-2 border-t border-[#2d5040]/60 flex flex-col gap-1">
+                  {m.home_label && (
+                    <p className="text-[#4d7a5d] text-xs">📍 {m.home_label}</p>
+                  )}
+                  {bails > 0 && (
+                    <p className="text-white/50 text-xs">
+                      🚩 {bails} {bails === 1 ? "bail" : "bails"}
+                    </p>
+                  )}
+                </div>
               )}
-            </div>
+            </button>
           );
         })}
       </div>

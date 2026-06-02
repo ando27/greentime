@@ -214,9 +214,9 @@ Vercel auto-deploys in ~30 seconds.
 - AV-02: Group overlap heatmap (14-day scroll, color by member count, click to expand)
 - Bug fixes: bail log deduplication, availability persistence, heatmap real-time updates
 - Next.js Vercel deployment — live at https://greentime-app.vercel.app
+- Member cards expansion (home location, bail count per member)
 
 ### 🟠 Up Next
-- Member cards expansion (bail count, location; handicap needs new schema column first)
 
 ### ⬜ Backlog
 - AV-03: See other members' availability
@@ -278,5 +278,5 @@ Bail is only triggered when status flips from 'in' → 'out' within `cutoff_hour
 **Availability time slot labels:**
 Labels were changed from AM/PM/Eve to Morning/Afternoon/Twilight. If any existing availability rows in Supabase still use 'morning'/'afternoon'/'evening' as the `time_of_day` value, the display labels are purely cosmetic — the DB values stay the same.
 
-**Member cards need expansion (backlog):**
-Members tab currently shows only name and admin badge. Planned additions: home location, bail count, handicap. Handicap does not exist in the schema — a new column on the `members` table will be needed before that can be built.
+**Member cards:**
+Members tab shows name, admin badge, home location, and bail count. Handicap is not yet implemented — a new column on the `members` table will be needed before that can be built.

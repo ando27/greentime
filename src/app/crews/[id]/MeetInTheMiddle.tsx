@@ -6,6 +6,8 @@ import type { DBMember, CourseItem } from "./types";
 interface Props {
   members: DBMember[];
   groupId: string;
+  isAdmin: boolean;
+  onBookCourse: (courseName: string) => void;
 }
 
 // Members who have opted in with a home location
@@ -171,9 +173,13 @@ function DriveChart({
 function CourseCard({
   item,
   globalMax,
+  isAdmin,
+  onBookCourse,
 }: {
   item: CourseWithDrives;
   globalMax: number;
+  isAdmin: boolean;
+  onBookCourse: (courseName: string) => void;
 }) {
   return (
     <div className="bg-[#0f2018] border border-[#2d5040] rounded-xl px-4 py-3">
@@ -184,12 +190,14 @@ function CourseCard({
             <p className="text-[#4d7a5d] text-xs mt-0.5">{item.course.address}</p>
           )}
         </div>
-        <button
-          onClick={() => console.log("Book this:", item.course.name)}
-          className="flex-none text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#2d5040] text-[#4d7a5d] hover:border-[#4ade80] hover:text-[#4ade80] active:scale-95 transition-all"
-        >
-          Book This
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => onBookCourse(item.course.name)}
+            className="flex-none text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#2d5040] text-[#4d7a5d] hover:border-[#4ade80] hover:text-[#4ade80] active:scale-95 transition-all"
+          >
+            Book This
+          </button>
+        )}
       </div>
 
       <DriveChart drives={item.drives} globalMax={globalMax} />
@@ -207,11 +215,15 @@ function ResultSection({
   badge,
   description,
   result,
+  isAdmin,
+  onBookCourse,
 }: {
   label: string;
   badge: string;
   description: string;
   result: AlgorithmResult;
+  isAdmin: boolean;
+  onBookCourse: (courseName: string) => void;
 }) {
   if (result.courses.length === 0) {
     return (
@@ -227,7 +239,13 @@ function ResultSection({
       <SectionHeader label={label} badge={badge} description={description} />
       <div className="flex flex-col gap-2">
         {result.courses.map((item) => (
-          <CourseCard key={`${item.course.lat}::${item.course.lng}`} item={item} globalMax={result.globalMax} />
+          <CourseCard
+            key={`${item.course.lat}::${item.course.lng}`}
+            item={item}
+            globalMax={result.globalMax}
+            isAdmin={isAdmin}
+            onBookCourse={onBookCourse}
+          />
         ))}
       </div>
     </section>
@@ -260,7 +278,7 @@ function SectionHeader({
 
 type Status = "idle" | "loading" | "done" | "error";
 
-export default function MeetInTheMiddle({ members }: Props) {
+export default function MeetInTheMiddle({ members, isAdmin, onBookCourse }: Props) {
   const located: LocatedMember[] = members
     .filter((m): m is DBMember & { home_lat: number; home_lng: number } =>
       m.home_lat != null && m.home_lng != null
@@ -378,6 +396,8 @@ export default function MeetInTheMiddle({ members }: Props) {
             badge="Centroid"
             description="Average of all home locations — shortest total travel time."
             result={centroidResult}
+            isAdmin={isAdmin}
+            onBookCourse={onBookCourse}
           />
 
           <div className="h-px bg-[#2d5040]/50" />
@@ -387,6 +407,8 @@ export default function MeetInTheMiddle({ members }: Props) {
             badge="Minimax"
             description="Minimises the longest individual drive so no one gets stuck with a marathon commute."
             result={minimaxResult}
+            isAdmin={isAdmin}
+            onBookCourse={onBookCourse}
           />
         </div>
       )}

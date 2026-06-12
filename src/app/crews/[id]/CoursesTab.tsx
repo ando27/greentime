@@ -11,6 +11,7 @@ interface Props {
   currentMember: DBMember;
   groupId: string;
   initialFavorites: CourseItem[];
+  onBookCourse: (courseName: string) => void;
 }
 
 const MILES_TO_METERS = 1609.34;
@@ -88,7 +89,7 @@ function courseKey(c: CourseItem) {
   return `${c.name}::${c.lat.toFixed(5)}::${c.lng.toFixed(5)}`;
 }
 
-export default function CoursesTab({ currentMember, groupId, initialFavorites }: Props) {
+export default function CoursesTab({ currentMember, groupId, initialFavorites, onBookCourse }: Props) {
   const supabase = createClient();
   const router = useRouter();
 
@@ -235,13 +236,14 @@ export default function CoursesTab({ currentMember, groupId, initialFavorites }:
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-none">
-                    {/* TODO: E-06 — pre-fill event form with this course */}
-                    <button
-                      onClick={() => console.log("book", course)}
-                      className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#4ade80] text-[#4ade80] hover:bg-[#4ade80]/10 active:scale-95 transition-all"
-                    >
-                      Book This
-                    </button>
+                    {currentMember.is_admin && (
+                      <button
+                        onClick={() => onBookCourse(course.name)}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#4ade80] text-[#4ade80] hover:bg-[#4ade80]/10 active:scale-95 transition-all"
+                      >
+                        Book This
+                      </button>
+                    )}
                     <button
                       onClick={() => handleAddFavorite(course)}
                       disabled={isFav || isPending}
@@ -289,13 +291,14 @@ export default function CoursesTab({ currentMember, groupId, initialFavorites }:
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-none">
-                    {/* TODO: E-06 — pre-fill event form with this course */}
-                    <button
-                      onClick={() => console.log("book", course)}
-                      className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#4ade80] text-[#4ade80] hover:bg-[#4ade80]/10 active:scale-95 transition-all"
-                    >
-                      Book This
-                    </button>
+                    {currentMember.is_admin && (
+                      <button
+                        onClick={() => onBookCourse(course.name)}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#4ade80] text-[#4ade80] hover:bg-[#4ade80]/10 active:scale-95 transition-all"
+                      >
+                        Book This
+                      </button>
+                    )}
                     {currentMember.is_admin && (
                       <button
                         onClick={() => handleRemoveFavorite(course)}

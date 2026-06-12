@@ -2,12 +2,14 @@
 
 import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { DBAvailability, DBMember } from "./types";
+import { formatDate, type DBAvailability, type DBMember } from "./types";
 
 interface Props {
   currentMember: DBMember;
   groupId: string;
   initialAvailability: DBAvailability[];
+  members: DBMember[];
+  allAvailability: DBAvailability[];
   onAvailabilityChange?: (rows: DBAvailability[]) => void;
 }
 
@@ -45,6 +47,8 @@ export default function AvailabilityCalendar({
   currentMember,
   groupId,
   initialAvailability,
+  members,
+  allAvailability,
   onAvailabilityChange,
 }: Props) {
   const supabase = createClient();
@@ -67,6 +71,33 @@ export default function AvailabilityCalendar({
   });
 
   const [pending, setPending] = useState<Set<string>>(new Set());
+
+  // AV-03: which day's crew availability detail is expanded (read-only view)
+  const [expandedDate, setExpandedDate] = useState<string | null>(null);
+
+  // date → member_id → Set<slot>, for everyone except the current member
+  const othersByDate = new Map<string, Map<string, Set<TimeSlot>>>();
+  for (const row of allAvailability) {
+    if (row.member_id === currentMember.id) continue;
+    let byMember = othersByDate.get(row.avail_date);
+    if (!byMember) {
+      byMember = new Map();
+      othersByDate.set(row.avail_date, byMember);
+    }
+    let slots = byMember.get(row.member_id);
+    if (!slots) {
+      slots = new Set();
+      byMember.set(row.member_id, slots);
+    }
+    slots.add(row.time_of_day);
+  }
+
+  const memberById = new Map(members.map((m) => [m.id, m]));
+  const expandedEntries = expandedDate
+    ? [...(othersByDate.get(expandedDate) ?? new Map<string, Set<TimeSlot>>())]
+        .map(([memberId, slots]) => ({ member: memberById.get(memberId), slots }))
+        .filter((e): e is { member: DBMember; slots: Set<TimeSlot> } => e.member !== undefined)
+    : [];
 
   const atStart = windowOffset === 0;
 
@@ -199,11 +230,15 @@ export default function AvailabilityCalendar({
           const isToday = dateStr === todayDateStr;
           const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
           const dayNum = d.getDate();
+          const othersCount = othersByDate.get(dateStr)?.size ?? 0;
+          const isExpanded = expandedDate === dateStr;
 
           return (
             <div
               key={dateStr}
-              className="flex-none w-[60px] flex flex-col items-center gap-1.5 bg-[#0f2018] border border-[#2d5040] rounded-xl py-3 px-1.5"
+              className={`flex-none w-[60px] flex flex-col items-center gap-1.5 bg-[#0f2018] border rounded-xl py-3 px-1.5 transition-colors ${
+                isExpanded ? "border-[#4ade80]/60" : "border-[#2d5040]"
+              }`}
             >
               {/* Day name */}
               <span className="text-[9px] font-semibold uppercase tracking-wide text-[#4d7a5d]">
@@ -218,6 +253,26 @@ export default function AvailabilityCalendar({
               >
                 {dayNum}
               </div>
+
+              {/* Crew availability badge (AV-03) */}
+              {othersCount > 0 ? (
+                <button
+                  onClick={() =>
+                    setExpandedDate((prev) => (prev === dateStr ? null : dateStr))
+                  }
+                  aria-expanded={isExpanded}
+                  aria-label={`${othersCount} other ${othersCount === 1 ? "member" : "members"} available on ${dateStr}`}
+                  className={`h-[18px] min-w-[28px] px-1.5 flex items-center justify-center rounded-full text-[9px] font-bold leading-none transition-all active:scale-95 ${
+                    isExpanded
+                      ? "bg-[#4ade80] text-[#0f2018]"
+                      : "bg-[#4ade80]/10 border border-[#4ade80]/40 text-[#4ade80] hover:bg-[#4ade80]/20"
+                  }`}
+                >
+                  +{othersCount}
+                </button>
+              ) : (
+                <div className="h-[18px]" aria-hidden="true" />
+              )}
 
               {/* Time pills */}
               {SLOTS.map(({ key: slot, label }) => {
@@ -247,6 +302,36 @@ export default function AvailabilityCalendar({
         })}
       </div>
 
+      {/* Crew availability detail (AV-03, read-only) */}
+      {expandedDate && (
+        <div className="bg-[#0f2018] border border-[#4ade80]/30 rounded-xl px-4 py-3">
+          <p className="text-xs font-semibold text-[#4ade80]/80 uppercase tracking-wider mb-2">
+            Crew available · {formatDate(expandedDate)}
+          </p>
+          {expandedEntries.length === 0 ? (
+            <p className="text-white/50 text-sm">No other members marked free.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {expandedEntries.map(({ member, slots }) => (
+                <div key={member.id} className="flex items-center justify-between gap-3">
+                  <span className="text-white text-sm truncate">{member.name}</span>
+                  <div className="flex gap-1 flex-none">
+                    {SLOTS.filter(({ key }) => slots.has(key)).map(({ key, label }) => (
+                      <span
+                        key={key}
+                        className="text-[9px] font-semibold px-2 py-1 rounded-full bg-[#4ade80]/10 border border-[#4ade80]/25 text-[#4ade80] leading-none"
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Legend */}
       <div className="flex items-center gap-4 justify-center">
         <div className="flex items-center gap-1.5">
@@ -256,6 +341,12 @@ export default function AvailabilityCalendar({
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded border border-[#2d5040]" />
           <span className="text-[10px] text-[#4d7a5d]">Not marked</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="h-3 px-1 flex items-center rounded-full bg-[#4ade80]/10 border border-[#4ade80]/40 text-[#4ade80] text-[8px] font-bold leading-none">
+            +n
+          </div>
+          <span className="text-[10px] text-[#4d7a5d]">Crew free</span>
         </div>
       </div>
     </div>

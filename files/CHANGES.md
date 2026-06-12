@@ -1,5 +1,27 @@
 # GreenTime Dev Log
-Last updated: 2026-05-28
+Last updated: 2026-06-12
+
+---
+
+## Fri Jun 12, 2026 — E-06 + AV-03
+
+### E-06: Book from course cards
+- "Book This" wired on all three course card types: Meet in the Middle results, nearby search results, and crew favorites
+- Clicking it opens CreateEventModal with the course name pre-filled (new `initialCourseName` prop); date, time, spots, fee, notes behave as before
+- Admin-only: Book This is hidden entirely for non-admin members on every card type
+- After creating an event (from any entry point), the UI switches to the Events tab so the new event is immediately visible
+- Prefill is cleared when the modal closes — the generic "+ Create Event" button still opens a blank form
+
+### AV-03: See other members' availability
+- "Your Availability" calendar days now show a "+N" badge when N other members have marked availability that day (own availability excluded from the count)
+- Clicking the badge expands a read-only detail panel below the calendar listing each available member with their Morning/Afternoon/Twilight slots; clicking again collapses it
+- Built entirely from the `allAvailability` state already lifted into CrewDetail — no new client-side queries (avoids the RLS empty-result trap from the member cards bail count bug)
+- Own availability toggles unchanged; legend gained a "+n Crew free" entry
+
+### Verified
+- End-to-end via Playwright against local dev server with two accounts (admin + non-admin member): badge counts, slot detail, admin gating, prefill from all three card types, tab switch after create, auto-RSVP still firing
+- Note: overpass-api.de was returning 406 during testing; verification rerouted /api/overpass to the maps.mail.ru mirror at the network layer (no app code change). Worth watching in production.
+- Note: anonymous (guest) sign-in is currently disabled in the Supabase project settings — the "Continue as guest" button on /login fails with "Anonymous sign-ins are disabled" (pre-existing, unrelated to these features)
 
 ---
 

@@ -77,6 +77,7 @@ export default function CrewDetail({
   const [bailLog, setBailLog] = useState<DBBailLog[]>(initialBailLog);
   const [availabilityState, setAvailabilityState] = useState<DBAvailability[]>(allAvailability);
   const [showCreate, setShowCreate] = useState(false);
+  const [createCourseName, setCreateCourseName] = useState<string | null>(null);
   const [editEvent, setEditEvent] = useState<DBEvent | null>(null);
   const [cancelTarget, setCancelTarget] = useState<DBEvent | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -131,6 +132,16 @@ export default function CrewDetail({
     setEditEvent(event);
   }, []);
 
+  const handleBookCourse = useCallback((courseName: string) => {
+    setCreateCourseName(courseName);
+    setShowCreate(true);
+  }, []);
+
+  const handleCreateClose = useCallback(() => {
+    setShowCreate(false);
+    setCreateCourseName(null);
+  }, []);
+
   const handleCancelRequest = useCallback((event: DBEvent) => {
     setCancelTarget(event);
   }, []);
@@ -139,6 +150,8 @@ export default function CrewDetail({
     setEvents((prev) => [...prev, event]);
     setRsvps((prev) => [...prev, ...newRsvps]);
     setShowCreate(false);
+    setCreateCourseName(null);
+    setTab("events");
   }
 
   function handleEditSuccess(updated: DBEvent) {
@@ -271,6 +284,8 @@ export default function CrewDetail({
                 currentMember={currentMember}
                 groupId={group.id}
                 initialAvailability={myAvailability}
+                members={initialMembers}
+                allAvailability={availabilityState}
                 onAvailabilityChange={handleAvailabilityChange}
               />
             </section>
@@ -283,11 +298,14 @@ export default function CrewDetail({
               currentMember={currentMember}
               groupId={group.id}
               initialFavorites={favoriteCourses}
+              onBookCourse={handleBookCourse}
             />
             <div className="h-px bg-[#2d5040]/50" />
             <MeetInTheMiddle
               members={initialMembers}
               groupId={group.id}
+              isAdmin={currentMember.is_admin}
+              onBookCourse={handleBookCourse}
             />
           </div>
         )}
@@ -300,7 +318,8 @@ export default function CrewDetail({
           currentMemberId={currentMember.id}
           members={initialMembers}
           favorites={favoriteCourses}
-          onClose={() => setShowCreate(false)}
+          initialCourseName={createCourseName ?? undefined}
+          onClose={handleCreateClose}
           onSuccess={handleCreateSuccess}
         />
       )}

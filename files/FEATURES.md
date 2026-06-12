@@ -1,5 +1,5 @@
 # GreenTime — Feature Tracker
-Last updated: 2026-05-28
+Last updated: 2026-06-12
 
 ---
 
@@ -17,7 +17,7 @@ Last updated: 2026-05-28
 | E-03 | Event notes | Free text field on event | Low | ✅ Done |
 | E-04 | Event edit | Admin can edit event details after creation | Low | ✅ Done |
 | E-05 | Event cancellation | Admin can cancel event with confirmation | Low | ✅ Done |
-| E-06 | Book from Meet in the Middle | "Book This" button on MITM cards pre-fills event form | Low | ⬜ Backlog |
+| E-06 | Book from Meet in the Middle | "Book This" button on MITM cards pre-fills event form | Low | ✅ Done |
 | E-07 | Bail reversal | If member bails then RSVPs back In before cutoff, remove bail_log entry | Low | ✅ Done |
 | E-08 | Bail lockout | Option to lock RSVPs X hours before event instead of allowing reversal | Low | ⏸ Skipped — UX unclear, revisit later |
 | E-09 | Spots remaining | Subtract "In" RSVPs from total spots, show spots left on event card | Low | ✅ Done |
@@ -67,7 +67,7 @@ Last updated: 2026-05-28
 |---|---|---|---|---|
 | AV-01 | Availability calendar | 2-week scroll, morning/afternoon/evening toggles | Low | ✅ Done |
 | AV-02 | Group overlap heatmap | Shows which days most members are free | Medium | ✅ Done |
-| AV-03 | Other members' availability | See crew availability, not just your own | Low | ⬜ Backlog |
+| AV-03 | Other members' availability | See crew availability, not just your own | Low | ✅ Done |
 
 ---
 

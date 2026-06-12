@@ -9,6 +9,7 @@ interface Props {
   currentMemberId: string;
   members: DBMember[];
   favorites?: CourseItem[];
+  initialCourseName?: string;
   onClose: () => void;
   onSuccess: (event: DBEvent, newRsvps: DBRsvp[]) => void;
 }
@@ -28,11 +29,15 @@ export default function CreateEventModal({
   currentMemberId,
   members,
   favorites = [],
+  initialCourseName,
   onClose,
   onSuccess,
 }: Props) {
   const supabase = createClient();
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState({
+    ...EMPTY_FORM,
+    courseName: initialCourseName ?? "",
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);

@@ -1,5 +1,5 @@
 # GreenTime — Project Handoff & Context Document
-Last updated: 2026-05-28
+Last updated: 2026-06-12
 
 This document exists so any new Claude conversation can pick up exactly where we left off without losing context. Read this before doing anything.
 
@@ -216,12 +216,12 @@ Vercel auto-deploys in ~30 seconds.
 - Next.js Vercel deployment — live at https://greentime-app.vercel.app
 - Member cards expansion (home location, bail count per member)
 - A-06: Set password from profile modal (magic link users + password changes)
+- E-06: Book from Meet in the Middle (Book This on MITM/search/favorites cards pre-fills event form; admin-only; switches to Events tab after create)
+- AV-03: See other members' availability (+N badge on availability calendar days, click to expand read-only member/slot detail)
 
 ### 🟠 Up Next
 
 ### ⬜ Backlog
-- AV-03: See other members' availability
-- E-06: Book from Meet in the Middle
 - Roadmap page (menu placeholder exists)
 - Changelog page (menu placeholder exists)
 - Back-to-back tee times (E-02)
@@ -281,6 +281,12 @@ Labels were changed from AM/PM/Eve to Morning/Afternoon/Twilight. If any existin
 
 **Member cards:**
 Members tab shows name, admin badge, home location, and bail count. Cards are buttons — tapping expands an inline detail row if the member has location or bail data. Handicap is not yet implemented — a new column on the `members` table will be needed before that can be built.
+
+**Guest sign-in currently broken (2026-06-12):**
+"Continue as guest" on /login fails with "Anonymous sign-ins are disabled" — anonymous auth is switched off in the Supabase project settings. Either re-enable it in Supabase (Auth → Providers → Anonymous) or remove the button.
+
+**Overpass API flakiness (2026-06-12):**
+overpass-api.de returned HTTP 406 for all requests during local testing (course search and Meet in the Middle fail when this happens). maps.mail.ru/osm/tools/overpass/api/interpreter worked as a drop-in mirror. If users report course search failures, consider pointing the /api/overpass rewrite at a mirror or adding fallback.
 
 **Member cards bail count bug (fixed):**
 The original implementation fetched `bail_log` by `group_id` on the client, which returned empty rows due to RLS (policy only permits reads filtered by `event_id`). Fixed by passing the already-loaded `bailLog` state from `CrewDetail` directly to `MembersTab` and computing counts from it — no extra query needed.

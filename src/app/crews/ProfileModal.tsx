@@ -1,20 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { UserProfile } from "./CrewsClient";
-
-interface NominatimResult {
-  display_name: string;
-  lat: string;
-  lon: string;
-}
-
-interface SelectedLocation {
-  lat: number;
-  lng: number;
-  label: string;
-}
+import LocationInput from "@/components/LocationInput";
+import { useToast } from "@/components/Toast";
+import { saveProfile, type HomeLocation, type UserProfile } from "@/lib/profile";
+import { friendlyError } from "@/lib/errors";
 
 interface Props {
   userId: string;
@@ -33,32 +24,28 @@ export default function ProfileModal({
   onSuccess,
 }: Props) {
   const supabase = createClient();
+  const toast = useToast();
 
   const [displayName, setDisplayName] = useState(initialProfile.displayName);
-  const [locationQuery, setLocationQuery] = useState(
+  const [selectedLocation, setSelectedLocation] = useState<HomeLocation | null>(
+    initialProfile.homeLat != null &&
+      initialProfile.homeLng != null &&
+      initialProfile.homeLabel
+      ? {
+          lat: initialProfile.homeLat,
+          lng: initialProfile.homeLng,
+          label: initialProfile.homeLabel,
+        }
+      : null
+  );
+  const [locationText, setLocationText] = useState(
     initialProfile.homeLabel ?? ""
   );
-  const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
-  const [selectedLocation, setSelectedLocation] =
-    useState<SelectedLocation | null>(
-      initialProfile.homeLat && initialProfile.homeLng && initialProfile.homeLabel
-        ? {
-            lat: initialProfile.homeLat,
-            lng: initialProfile.homeLng,
-            label: initialProfile.homeLabel,
-          }
-        : null
-    );
-  const [isSearching, setIsSearching] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const locationRef = useRef<HTMLDivElement>(null);
 
   const handleClose = useCallback(() => onClose(), [onClose]);
 
@@ -67,60 +54,6 @@ export default function ProfileModal({
     document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
   }, [handleClose]);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        locationRef.current &&
-        !locationRef.current.contains(e.target as Node)
-      ) {
-        setShowSuggestions(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const searchLocation = useCallback(async (query: string) => {
-    if (!query.trim() || query.length < 3) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-    setIsSearching(true);
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5`,
-        { headers: { "Accept-Language": "en" } }
-      );
-      const data: NominatimResult[] = await res.json();
-      setSuggestions(data);
-      setShowSuggestions(data.length > 0);
-    } catch {
-      setSuggestions([]);
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
-
-  function handleLocationChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value;
-    setLocationQuery(value);
-    setSelectedLocation(null);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => searchLocation(value), 300);
-  }
-
-  function handleSelectSuggestion(s: NominatimResult) {
-    setLocationQuery(s.display_name);
-    setSelectedLocation({
-      lat: parseFloat(s.lat),
-      lng: parseFloat(s.lon),
-      label: s.display_name,
-    });
-    setSuggestions([]);
-    setShowSuggestions(false);
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -131,10 +64,14 @@ export default function ProfileModal({
       setError("Display name is required.");
       return;
     }
-    if (!selectedLocation) {
-      setError("Please select a home location from the suggestions.");
+    // Text typed but never picked from the list would be silently dropped
+    if (locationText.trim() && !selectedLocation) {
+      setError(
+        "Pick your home location from the suggestions, or clear the box to remove it."
+      );
       return;
     }
+
     if (newPassword) {
       if (newPassword.length < 8) {
         setError("Password must be at least 8 characters.");
@@ -147,40 +84,61 @@ export default function ProfileModal({
     }
 
     setIsSubmitting(true);
-    try {
-      const { error: rpcError } = await supabase.rpc("upsert_user_profile", {
-        p_display_name: trimmedName,
-        p_home_lat: selectedLocation.lat,
-        p_home_lng: selectedLocation.lng,
-        p_home_label: selectedLocation.label,
-      });
-      if (rpcError) throw rpcError;
 
-      // Sync name + location across all the user's member rows
-      const { error: memberError } = await supabase
+    try {
+      // 1. Save the profile, then re-read it to confirm it stuck
+      const saved = await saveProfile(
+        supabase,
+        userId,
+        trimmedName,
+        selectedLocation
+      );
+
+      // 2. Copy name + location onto every crew membership, so Meet in the
+      //    Middle uses the new location in every crew. .select() returns the
+      //    rows that changed, so a blocked update can't pass silently.
+      const { data: updatedRows, error: memberError } = await supabase
         .from("members")
         .update({
-          name: trimmedName,
-          home_lat: selectedLocation.lat,
-          home_lng: selectedLocation.lng,
-          home_label: selectedLocation.label,
+          name: saved.displayName,
+          home_lat: saved.homeLat,
+          home_lng: saved.homeLng,
+          home_label: saved.homeLabel,
         })
-        .eq("user_id", userId);
-      if (memberError) throw memberError;
-
-      if (newPassword) {
-        const { error: pwError } = await supabase.auth.updateUser({ password: newPassword });
-        if (pwError) throw pwError;
+        .eq("user_id", userId)
+        .select("id");
+      if (memberError) {
+        throw new Error(
+          "Profile saved, but your crews couldn't be updated: " +
+            friendlyError(memberError)
+        );
       }
 
-      onSuccess({
-        displayName: trimmedName,
-        homeLat: selectedLocation.lat,
-        homeLng: selectedLocation.lng,
-        homeLabel: selectedLocation.label,
-      });
+      if (newPassword) {
+        const { error: pwError } = await supabase.auth.updateUser({
+          password: newPassword,
+        });
+        if (pwError) {
+          throw new Error(
+            "Profile saved, but the password wasn't changed: " +
+              friendlyError(pwError)
+          );
+        }
+      }
+
+      const crewCount = updatedRows?.length ?? 0;
+      const crewNote =
+        crewCount > 0
+          ? ` Updated in ${crewCount} ${crewCount === 1 ? "crew" : "crews"}.`
+          : "";
+      toast.success(
+        saved.homeLabel
+          ? `Saved. Home location: ${saved.homeLabel}.${crewNote}`
+          : `Saved. No home location set.${crewNote}`
+      );
+      onSuccess(saved);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save profile.");
+      setError(friendlyError(err, "Couldn't save your profile."));
       setIsSubmitting(false);
     }
   }
@@ -227,67 +185,24 @@ export default function ProfileModal({
             />
           </div>
 
-          <div ref={locationRef} className="relative flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5">
             <label
               htmlFor="profileLocation"
               className="text-sm font-medium text-white/70"
             >
               Home location
             </label>
-            <div className="relative">
-              <input
-                id="profileLocation"
-                type="text"
-                value={locationQuery}
-                onChange={handleLocationChange}
-                onFocus={() =>
-                  suggestions.length > 0 && setShowSuggestions(true)
-                }
-                placeholder="Augusta, GA"
-                autoComplete="off"
-                className={inputCls + " pr-8"}
-              />
-              {isSearching && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <div className="w-4 h-4 border-2 border-[#4ade80]/30 border-t-[#4ade80] rounded-full animate-spin" />
-                </div>
-              )}
-              {selectedLocation && !isSearching && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                    className="text-[#4ade80]"
-                  >
-                    <path
-                      d="M2 7l3.5 3.5 6.5-6.5"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-              )}
-            </div>
-
-            {showSuggestions && suggestions.length > 0 && (
-              <ul className="absolute top-full mt-1 left-0 right-0 z-10 bg-[#0f2018] border border-[#2d5040] rounded-lg overflow-hidden shadow-xl">
-                {suggestions.map((s, i) => (
-                  <li key={i}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectSuggestion(s)}
-                      className="w-full text-left px-4 py-2.5 text-sm text-white/80 hover:bg-[#1a3a2a] hover:text-white transition-colors truncate"
-                    >
-                      {s.display_name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <LocationInput
+              id="profileLocation"
+              value={selectedLocation}
+              onChange={(location, text) => {
+                setSelectedLocation(location);
+                setLocationText(text);
+              }}
+            />
+            <p className="text-xs text-[#4d7a5d]">
+              Used for Meet in the Middle in all your crews.
+            </p>
           </div>
 
           {/* Password section */}

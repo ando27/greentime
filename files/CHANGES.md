@@ -58,6 +58,13 @@ One entry per TODO item, each its own commit.
 - Small behavior change: un-tapping "In" inside the cutoff window now logs a bail, the same as tapping "Out". Before, it was a way to drop out without a bail
 - Done out of order (before P0-7) because P0-7's "saved" confirmation uses the toast
 
+### P0-7: Home location saving
+- Every location write checks `error` and shows it. Writes also ask the database to return the changed rows, so a blocked update (no error, zero rows) is caught instead of passing silently. That silent case is the likely cause of "home location not saving"
+- Saving from the profile updates `user_profiles` (re-read to confirm) and every `members` row for the user, then shows a confirmation with the saved label and how many crews were updated
+- New: "Your location in this crew" on the Members tab updates only that one member row and confirms with the saved label
+- Fixed: a profile with a location on the equator/prime meridian (lat or lng of 0) was treated as having no location
+- Location search box extracted into one shared component (`src/components/LocationInput.tsx`) used by setup, profile, and the crew screen, with "Searching…", "No places found", and "not responding, try again" states. The old code swallowed search errors
+
 <!--NEXT-->
 
 ---

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
 import EventCard from "./EventCard";
+import MyCrewLocation from "./MyCrewLocation";
 import CreateEventModal from "./CreateEventModal";
 import EditEventModal from "./EditEventModal";
 import AvailabilityCalendar from "./AvailabilityCalendar";
@@ -280,7 +281,12 @@ export default function CrewDetail({
         )}
 
         {tab === "members" && (
-          <MembersTab members={initialMembers} inviteCode={group.invite_code} bailLog={bailLog} />
+          <MembersTab
+            members={initialMembers}
+            currentMember={currentMember}
+            inviteCode={group.invite_code}
+            bailLog={bailLog}
+          />
         )}
 
         {tab === "availability" && (
@@ -515,10 +521,12 @@ function EventsTab({
 
 function MembersTab({
   members,
+  currentMember,
   inviteCode,
   bailLog,
 }: {
   members: DBMember[];
+  currentMember: DBMember;
   inviteCode: string;
   bailLog: DBBailLog[];
 }) {
@@ -565,6 +573,9 @@ function MembersTab({
           {copied ? "Copied!" : "Copy"}
         </button>
       </div>
+
+      {/* Your own location for this crew */}
+      <MyCrewLocation member={currentMember} />
 
       {/* Member list */}
       <div className="flex flex-col gap-2">

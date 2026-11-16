@@ -1,23 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { loadProfile, saveProfile } from "@/lib/profile";
+import { loadProfile, saveProfile, type HomeLocation } from "@/lib/profile";
+import LocationInput from "@/components/LocationInput";
 import { safeNext } from "@/lib/safeNext";
 import { friendlyError } from "@/lib/errors";
-
-interface NominatimResult {
-  display_name: string;
-  lat: string;
-  lon: string;
-}
-
-interface SelectedLocation {
-  lat: number;
-  lng: number;
-  label: string;
-}
 
 export default function SetupPage() {
   const router = useRouter();
@@ -25,15 +14,11 @@ export default function SetupPage() {
 
   const [displayName, setDisplayName] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
-  const [selectedLocation, setSelectedLocation] =
-    useState<SelectedLocation | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<HomeLocation | null>(
+    null
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const locationRef = useRef<HTMLDivElement>(null);
 
   // Who is signed in. null until we know.
   const [userId, setUserId] = useState<string | null>(null);
@@ -72,63 +57,6 @@ export default function SetupPage() {
       active = false;
     };
   }, [supabase, router]);
-
-  // Close suggestions on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (
-        locationRef.current &&
-        !locationRef.current.contains(e.target as Node)
-      ) {
-        setShowSuggestions(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  const searchLocation = useCallback(async (query: string) => {
-    if (!query.trim() || query.length < 3) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-    setIsSearching(true);
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5`,
-        { headers: { "Accept-Language": "en" } }
-      );
-      const data: NominatimResult[] = await res.json();
-      setSuggestions(data);
-      setShowSuggestions(data.length > 0);
-    } catch {
-      setSuggestions([]);
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
-
-  function handleLocationChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value;
-    setLocationQuery(value);
-    setSelectedLocation(null);
-
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => searchLocation(value), 450);
-  }
-
-  function handleSelectSuggestion(suggestion: NominatimResult) {
-    const label = suggestion.display_name;
-    setLocationQuery(label);
-    setSelectedLocation({
-      lat: parseFloat(suggestion.lat),
-      lng: parseFloat(suggestion.lon),
-      label,
-    });
-    setSuggestions([]);
-    setShowSuggestions(false);
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -232,7 +160,7 @@ export default function SetupPage() {
               />
             </div>
 
-            <div ref={locationRef} className="relative flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="location"
                 className="text-sm font-medium text-white/70"
@@ -242,58 +170,14 @@ export default function SetupPage() {
                   (optional, used for Meet in the Middle)
                 </span>
               </label>
-              <div className="relative">
-                <input
-                  id="location"
-                  type="text"
-                  value={locationQuery}
-                  onChange={handleLocationChange}
-                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                  placeholder="Augusta, GA"
-                  autoComplete="off"
-                  className="w-full rounded-lg bg-[#1a3a2a] border border-[#2d5040] text-white placeholder-[#4d7a5d] px-4 py-3 text-sm outline-none focus:border-[#4ade80] focus:ring-1 focus:ring-[#4ade80] transition-colors pr-8"
-                />
-                {isSearching && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <div className="w-4 h-4 border-2 border-[#4ade80]/30 border-t-[#4ade80] rounded-full animate-spin" />
-                  </div>
-                )}
-                {selectedLocation && !isSearching && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 14 14"
-                      fill="none"
-                      className="text-[#4ade80]"
-                    >
-                      <path
-                        d="M2 7l3.5 3.5 6.5-6.5"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-                )}
-              </div>
-
-              {showSuggestions && suggestions.length > 0 && (
-                <ul className="absolute top-full mt-1 left-0 right-0 z-10 bg-[#0f2018] border border-[#2d5040] rounded-lg overflow-hidden shadow-xl">
-                  {suggestions.map((s, i) => (
-                    <li key={i}>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectSuggestion(s)}
-                        className="w-full text-left px-4 py-2.5 text-sm text-white/80 hover:bg-[#1a3a2a] hover:text-white transition-colors truncate"
-                      >
-                        {s.display_name}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <LocationInput
+                id="location"
+                value={selectedLocation}
+                onChange={(location, text) => {
+                  setSelectedLocation(location);
+                  setLocationQuery(text);
+                }}
+              />
             </div>
 
             {error && (

@@ -61,9 +61,9 @@ Migration from single HTML to Next.js is complete. Active development is now in 
 | Hosting | Vercel — https://greentime-app.vercel.app |
 
 **Supabase project:**
-- URL: `https://fhflxafuvnvafkhwniiz.supabase.co`
-- Anon key: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoZmx4YWZ1dm52YWZraHduaWl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNDQ3MjIsImV4cCI6MjA5MDgyMDcyMn0.E3e-HpSRmxM9sy2RzYmet1qbTJOXRvsDIoGqjKLFKKk`
-- Keys stored in `.env.local` (not committed) and Vercel environment variables
+- The project was recreated in Nov 2026. The URL and anon key are NOT written in this repo.
+- They live in `.env.local` (not committed; copy `.env.example`) and in Vercel environment variables (Production and Preview)
+- Setup steps for a fresh project: `files/SUPABASE_SETUP.md`. Database: run `supabase/schema.sql`
 
 **GitHub repo:** `https://github.com/ando27/greentime`
 **Local path:** `~/greentime-next/`

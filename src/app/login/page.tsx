@@ -1,9 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { safeNext } from "@/lib/safeNext";
+
+// Messages for the ?error= codes sent back by /auth/callback
+const LINK_ERRORS: Record<string, string> = {
+  link_expired:
+    "That sign-in link has expired or was already used. Request a new one.",
+  auth_failed:
+    "That sign-in link didn't work. Open it in the same browser you requested it from, or request a new one.",
+  missing_code: "That sign-in link was incomplete. Request a new one.",
+};
 
 type View = "password" | "magic";
 
@@ -72,27 +82,42 @@ function InputField({
 }
 
 export default function LoginPage() {
+  // useSearchParams needs a Suspense boundary
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#1a3a2a]" />}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+  const next = safeNext(searchParams.get("next"));
+  const nextQuery = next === "/crews" ? "" : `?next=${encodeURIComponent(next)}`;
+  const linkError = LINK_ERRORS[searchParams.get("error") ?? ""] ?? "";
 
   const [view, setView] = useState<View>("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(linkError);
   const [magicSent, setMagicSent] = useState(false);
 
   async function checkProfileAndRedirect(userId: string) {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("user_profiles")
       .select("display_name")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
-    if (!profile?.display_name) {
-      router.push("/setup");
+    // Only go to setup when we know there is no profile yet. If the lookup
+    // failed, continue to the app, which shows the error with a retry.
+    if (!profileError && !profile?.display_name) {
+      router.push(`/setup${nextQuery}`);
     } else {
-      router.push("/crews");
+      router.push(next);
     }
   }
 
@@ -123,7 +148,7 @@ export default function LoginPage() {
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback${nextQuery}`,
       },
     });
 
@@ -149,7 +174,7 @@ export default function LoginPage() {
     }
 
     if (data.user) {
-      router.push("/crews");
+      await checkProfileAndRedirect(data.user.id);
     }
   }
 
@@ -198,7 +223,7 @@ export default function LoginPage() {
 
                   <div className="flex items-center justify-center">
                     <Link
-                      href="/signup"
+                      href={`/signup${nextQuery}`}
                       className="text-sm text-[#4ade80] hover:text-[#6ee7a0] transition-colors"
                     >
                       Create account

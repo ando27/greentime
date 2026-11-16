@@ -20,6 +20,14 @@ One entry per TODO item, each its own commit.
 - Indexes on `members.user_id`, `members.group_id`, and `group_id` on every child table
 - Verified by running it twice against a local Postgres 16 with stand-in `auth` objects: duplicate member rejected, other users' profiles not writable, signed-out role denied
 
+### P0-3: New Supabase keys and URLs
+- New `files/SUPABASE_SETUP.md`: exact steps for running the schema, copying the URL and key into `.env.local` and Vercel, and setting Site URL / Redirect URLs
+- Removed the old project's URL and key from the repo: deleted the stray `env.local` file (wrong name, never loaded), removed the hardcoded Supabase rewrite in `next.config.ts` (unused), and removed them from `files/CLAUDE.md`. Added `.env.example`
+- Missing keys now give a clear "Supabase is not configured" message instead of a cryptic crash
+- Confirmed `signInWithOtp` and `signUp` pass `emailRedirectTo` built from the current origin
+- `/auth/callback` now also accepts `token_hash` links (work from any device, needs the optional email template change in the setup doc) and reports expired or already-used links
+- `/login` now shows a message when a sign-in link fails. Before, it silently landed back on the sign-in form
+
 <!--NEXT-->
 
 ---

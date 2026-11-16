@@ -1,55 +1,61 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/safeNext";
 
+// Magic links and "confirm your email" links land here.
+// Two link styles are supported:
+//   ?code=...                    default Supabase emails (must be opened in the
+//                                same browser that asked for the link)
+//   ?token_hash=...&type=email   custom email template (works from any device)
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/crews";
+  const tokenHash = searchParams.get("token_hash");
+  const type = searchParams.get("type") as EmailOtpType | null;
+  const next = safeNext(searchParams.get("next"));
 
-  if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=missing_code`);
+  const fail = (reason: string) =>
+    NextResponse.redirect(`${origin}/login?error=${reason}`);
+
+  // Supabase sends its own error details when a link is expired or already used
+  if (searchParams.get("error")) {
+    return fail("link_expired");
   }
 
-  const cookieStore = await cookies();
+  const supabase = await createClient();
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-  if (error) {
-    return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+  if (tokenHash && type) {
+    const { error } = await supabase.auth.verifyOtp({
+      type,
+      token_hash: tokenHash,
+    });
+    if (error) return fail("link_expired");
+  } else if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) return fail("auth_failed");
+  } else {
+    return fail("missing_code");
   }
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user) {
-    const { data: profile } = await supabase
-      .from("user_profiles")
-      .select("display_name")
-      .eq("id", user.id)
-      .single();
+  if (!user) return fail("auth_failed");
 
-    if (!profile?.display_name) {
-      return NextResponse.redirect(`${origin}/setup`);
-    }
+  const { data: profile, error: profileError } = await supabase
+    .from("user_profiles")
+    .select("display_name")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  // Only send to setup when we KNOW there is no profile. If the lookup itself
+  // failed, go on to the app, which shows the error with a retry.
+  if (!profileError && !profile?.display_name) {
+    const setupUrl =
+      next === "/crews" ? "/setup" : `/setup?next=${encodeURIComponent(next)}`;
+    return NextResponse.redirect(`${origin}${setupUrl}`);
   }
 
   return NextResponse.redirect(`${origin}${next}`);

@@ -67,9 +67,18 @@ export interface DBAvailability {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-export function todayStr(): string {
-  const d = new Date();
+// DATE RULE: calendar dates are always built from LOCAL date parts.
+// Never use toISOString() for a calendar date: it is UTC, so after about 7pm
+// Eastern "today" becomes tomorrow.
+
+/** Date → 'YYYY-MM-DD' in the device's local time zone. */
+export function toYMD(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Today's date as 'YYYY-MM-DD' in the device's local time zone. */
+export function todayStr(): string {
+  return toYMD(new Date());
 }
 
 export function formatDate(dateStr: string): string {

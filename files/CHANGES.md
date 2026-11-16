@@ -71,6 +71,13 @@ One entry per TODO item, each its own commit.
 - If two joins race (double tap, two tabs), the new `members (group_id, user_id)` unique constraint blocks the second row and the app recovers by reusing the first
 - Join logic moved to one function (`joinCrewByCode` in `src/lib/crews.ts`), shared by the join dialog and invite links
 
+### P1-1: Timezone date bug
+- Two real UTC leaks found and fixed:
+  1. The event form's earliest-allowed date used `toISOString()` (UTC). After about 7pm Eastern you could not create an event for today
+  2. The crew screen was first drawn on the server, which runs in UTC, so "today", upcoming vs past, and greyed-out days could be a day ahead in the evening. The crew screen now draws only in the browser, using the device's own clock
+- One shared `toYMD()` helper built from local date parts (`getFullYear`, `getMonth`, `getDate`). The duplicate copies in the availability calendar and heat map now use it
+- Verified: 8:30pm in New York and Los Angeles gives today's date (the old way gave tomorrow)
+
 <!--NEXT-->
 
 ---

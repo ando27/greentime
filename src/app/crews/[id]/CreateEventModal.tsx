@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
 import { friendlyError } from "@/lib/errors";
-import type { DBEvent, DBMember, DBRsvp, CourseItem } from "./types";
+import { todayStr, type DBEvent, type DBMember, type DBRsvp, type CourseItem } from "./types";
 
 interface Props {
   groupId: string;
@@ -216,7 +216,7 @@ export default function CreateEventModal({
               <input
                 type="date"
                 value={form.eventDate}
-                min={new Date().toISOString().slice(0, 10)}
+                min={todayStr()}
                 onChange={(e) => set("eventDate", e.target.value)}
                 className={inputCls}
               />

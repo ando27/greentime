@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { DBAvailability, DBMember } from "./types";
+import { toYMD, type DBAvailability, type DBMember } from "./types";
 
 interface Props {
   members: DBMember[];
@@ -15,10 +15,6 @@ function addDays(d: Date, n: number): Date {
   const r = new Date(d);
   r.setDate(r.getDate() + n);
   return r;
-}
-
-function toDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function formatRange(start: Date, end: Date): string {
@@ -65,7 +61,7 @@ function labelTextForCount(n: number): string {
 export default function GroupOverlapHeatmap({ members, allAvailability }: Props) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const todayDateStr = toDateStr(today);
+  const todayDateStr = toYMD(today);
 
   const [windowOffset, setWindowOffset] = useState(0);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -127,7 +123,7 @@ export default function GroupOverlapHeatmap({ members, allAvailability }: Props)
         style={{ scrollbarWidth: "none" }}
       >
         {windowDays.map((d) => {
-          const dateStr = toDateStr(d);
+          const dateStr = toYMD(d);
           const memberSet = dateToMemberIds.get(dateStr) ?? new Set<string>();
           const count = memberSet.size;
           const isToday = dateStr === todayDateStr;

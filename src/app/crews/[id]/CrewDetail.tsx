@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -38,6 +38,16 @@ interface Props {
 
 type Tab = "events" | "members" | "availability" | "courses";
 
+// False while the page is being built on the server, true in the browser.
+const subscribeNoop = () => () => {};
+function useIsBrowser(): boolean {
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false
+  );
+}
+
 function CalendarIcon() {
   return (
     <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
@@ -73,6 +83,7 @@ export default function CrewDetail({
   const router = useRouter();
   const supabase = createClient();
   const toast = useToast();
+  const isBrowser = useIsBrowser();
   const [tab, setTab] = useState<Tab>("events");
   const [events, setEvents] = useState<DBEvent[]>(initialEvents);
   const [rsvps, setRsvps] = useState<DBRsvp[]>(initialRsvps);
@@ -202,6 +213,21 @@ export default function CrewDetail({
     }
     router.push("/login");
     router.refresh();
+  }
+
+  // Everything on this screen depends on "today" (upcoming vs past, greyed
+  // days, the bail window). The server runs in UTC, so only draw it in the
+  // browser, where the clock and time zone are the user's own.
+  if (!isBrowser) {
+    return (
+      <div className="min-h-screen bg-[#1a3a2a] flex items-center justify-center">
+        <div
+          className="w-6 h-6 border-2 border-[#4ade80]/30 border-t-[#4ade80] rounded-full animate-spin"
+          role="status"
+          aria-label="Loading crew"
+        />
+      </div>
+    );
   }
 
   return (

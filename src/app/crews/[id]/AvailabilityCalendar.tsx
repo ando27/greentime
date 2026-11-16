@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
-import { formatDate, type DBAvailability, type DBMember } from "./types";
+import { toYMD, formatDate, type DBAvailability, type DBMember } from "./types";
 
 interface Props {
   currentMember: DBMember;
@@ -32,10 +32,6 @@ function addDays(d: Date, n: number): Date {
   return r;
 }
 
-function toDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 function formatRange(start: Date, end: Date): string {
   const sm = start.toLocaleDateString("en-US", { month: "short" });
   const em = end.toLocaleDateString("en-US", { month: "short" });
@@ -58,7 +54,7 @@ export default function AvailabilityCalendar({
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const todayDateStr = toDateStr(today);
+  const todayDateStr = toYMD(today);
 
   // Days offset from today; 0 = window starts at today
   const [windowOffset, setWindowOffset] = useState(0);
@@ -230,7 +226,7 @@ export default function AvailabilityCalendar({
         style={{ scrollbarWidth: "none" }}
       >
         {windowDays.map((d) => {
-          const dateStr = toDateStr(d);
+          const dateStr = toYMD(d);
           const isToday = dateStr === todayDateStr;
           const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
           const dayNum = d.getDate();

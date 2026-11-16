@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { safeNext } from "@/lib/safeNext";
 
 function GreenTimeLogo() {
   return (
@@ -34,8 +35,21 @@ function GreenTimeLogo() {
 }
 
 export default function SignupPage() {
+  // useSearchParams needs a Suspense boundary
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#1a3a2a]" />}>
+      <SignupForm />
+    </Suspense>
+  );
+}
+
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+  const next = safeNext(searchParams.get("next"));
+  const nextQuery = next === "/crews" ? "" : `?next=${encodeURIComponent(next)}`;
+  const [confirmSent, setConfirmSent] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,11 +73,11 @@ export default function SignupPage() {
 
     setLoading(true);
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback${nextQuery}`,
       },
     });
 
@@ -73,7 +87,43 @@ export default function SignupPage() {
       return;
     }
 
-    router.push("/setup");
+    // When "Confirm email" is on in Supabase there is no session yet: the
+    // user has to click the link in their email first. Going to /setup now
+    // would just bounce them back to the sign-in page.
+    if (!data.session) {
+      setLoading(false);
+      setConfirmSent(true);
+      return;
+    }
+
+    router.push(`/setup${nextQuery}`);
+  }
+
+  if (confirmSent) {
+    return (
+      <div className="min-h-screen bg-[#1a3a2a] flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-sm">
+          <GreenTimeLogo />
+          <div className="bg-[#0f2018] border border-[#2d5040] rounded-2xl p-8 shadow-2xl text-center">
+            <h2 className="text-white font-semibold text-lg mb-2">
+              Check your email
+            </h2>
+            <p className="text-[#4d7a5d] text-sm mb-6">
+              We sent a confirmation link to{" "}
+              <span className="text-white/70">{email}</span>. Tap it to finish
+              creating your account. If you already have an account with this
+              email, sign in instead.
+            </p>
+            <Link
+              href={`/login${nextQuery}`}
+              className="text-sm text-[#4ade80] hover:text-[#6ee7a0] transition-colors"
+            >
+              ← Back to sign in
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -151,7 +201,7 @@ export default function SignupPage() {
 
             <div className="flex items-center justify-center">
               <Link
-                href="/login"
+                href={`/login${nextQuery}`}
                 className="text-sm text-[#4d7a5d] hover:text-white/60 transition-colors"
               >
                 Already have an account? Sign in

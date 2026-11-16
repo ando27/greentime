@@ -28,6 +28,13 @@ One entry per TODO item, each its own commit.
 - `/auth/callback` now also accepts `token_hash` links (work from any device, needs the optional email template change in the setup doc) and reports expired or already-used links
 - `/login` now shows a message when a sign-in link fails. Before, it silently landed back on the sign-in form
 
+### P0-4: Auth state handling
+- One shared Supabase browser client (`src/lib/supabase/client.ts`) used by every component
+- New `AuthListener` in the root layout: calls `getSession()` on load and handles `INITIAL_SESSION`, `SIGNED_IN`, `TOKEN_REFRESHED`, and `SIGNED_OUT`. Nothing is awaited inside the `onAuthStateChange` callback (follow-up work uses `setTimeout(..., 0)`), so the supabase-js deadlock cannot happen. Signing out in one tab now signs out the others
+- Fixed: redirects from the proxy dropped freshly refreshed session cookies, which could leave the browser holding an expired token (looks like being randomly signed out)
+- Fixed: creating an account while "Confirm email" is on sent the user to `/setup` with no session, which bounced them to the sign-in page with no explanation. They now see a "Check your email" screen. This is a likely cause of "the profile didn't stick"
+- Page refresh keeps you signed in (session is in cookies, refreshed by the proxy on every request)
+
 <!--NEXT-->
 
 ---

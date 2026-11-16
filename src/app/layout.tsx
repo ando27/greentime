@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Instrument_Serif } from "next/font/google";
 import "./globals.css";
+import AuthListener from "@/components/AuthListener";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -26,7 +27,10 @@ export default function RootLayout({
       lang="en"
       className={`${dmSans.variable} ${instrumentSerif.variable} h-full`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <AuthListener />
+        {children}
+      </body>
     </html>
   );
 }

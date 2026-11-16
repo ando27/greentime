@@ -35,6 +35,14 @@ One entry per TODO item, each its own commit.
 - Fixed: creating an account while "Confirm email" is on sent the user to `/setup` with no session, which bounced them to the sign-in page with no explanation. They now see a "Check your email" screen. This is a likely cause of "the profile didn't stick"
 - Page refresh keeps you signed in (session is in cookies, refreshed by the proxy on every request)
 
+### P0-5: Profile lookup and first-run setup
+- Root cause found: every profile lookup used `.single()`, and any failure (missing row OR a network/database error) was treated as "no profile", which re-showed the setup screen to people who already had one
+- All lookups now use `.maybeSingle()` through one helper (`src/lib/profile.ts`). Missing row → setup screen. Lookup failed → an error screen with "Try again", never the setup screen
+- Setup screen checks for an existing profile on load and skips itself, so it only ever shows once
+- After `upsert_user_profile`, the row is re-read and compared with what was entered before moving on. If it didn't save, the user is told
+- Home location is now optional at setup (it can be added later from the profile), so a location-search outage can't block account creation
+- New `src/lib/errors.ts` turns Supabase/network errors into readable messages
+
 <!--NEXT-->
 
 ---

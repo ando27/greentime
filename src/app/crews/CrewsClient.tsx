@@ -15,12 +15,8 @@ export interface Crew {
   memberCount: number;
 }
 
-export interface UserProfile {
-  displayName: string;
-  homeLat: number | null;
-  homeLng: number | null;
-  homeLabel: string | null;
-}
+export type { UserProfile } from "@/lib/profile";
+import type { UserProfile } from "@/lib/profile";
 
 interface Props {
   userId: string;

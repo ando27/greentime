@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { loadProfile, saveProfile } from "@/lib/profile";
+import { safeNext } from "@/lib/safeNext";
+import { friendlyError } from "@/lib/errors";
 
 interface NominatimResult {
   display_name: string;
@@ -32,11 +35,42 @@ export default function SetupPage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const locationRef = useRef<HTMLDivElement>(null);
 
-  // Redirect to /login if not authenticated
+  // Who is signed in. null until we know.
+  const [userId, setUserId] = useState<string | null>(null);
+  const [checking, setChecking] = useState(true);
+
+  // Where to go after setup (an invite link may have sent the user here)
+  function nextPage(): string {
+    return safeNext(new URLSearchParams(window.location.search).get("next"));
+  }
+
+  // First-run check: signed out → /login. Profile already exists → skip this
+  // screen, so setup is only ever shown once.
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) router.replace("/login");
-    });
+    let active = true;
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!active) return;
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+      setUserId(user.id);
+
+      const { profile, error: loadError } = await loadProfile(supabase, user.id);
+      if (!active) return;
+      if (profile) {
+        router.replace(nextPage());
+        return;
+      }
+      if (loadError) setError(loadError);
+      setChecking(false);
+    })();
+    return () => {
+      active = false;
+    };
   }, [supabase, router]);
 
   // Close suggestions on outside click
@@ -105,27 +139,45 @@ export default function SetupPage() {
       return;
     }
 
-    if (!selectedLocation) {
-      setError("Please select a home location from the suggestions.");
+    // Location is optional, but half-typed text that was never picked from
+    // the list would be silently dropped, so stop and say so.
+    if (locationQuery.trim() && !selectedLocation) {
+      setError(
+        "Pick your home location from the suggestions, or clear the box to add it later."
+      );
+      return;
+    }
+
+    if (!userId) {
+      setError("Still checking your sign-in. Try again in a moment.");
       return;
     }
 
     setIsSubmitting(true);
 
-    const { error: rpcError } = await supabase.rpc("upsert_user_profile", {
-      p_display_name: displayName.trim(),
-      p_home_lat: selectedLocation.lat,
-      p_home_lng: selectedLocation.lng,
-      p_home_label: selectedLocation.label,
-    });
-
-    if (rpcError) {
-      setError(rpcError.message);
+    try {
+      // Saves, then re-reads the row to confirm it stuck before moving on
+      await saveProfile(supabase, userId, displayName, selectedLocation);
+    } catch (err) {
+      setError(friendlyError(err, "Couldn't save your profile."));
       setIsSubmitting(false);
       return;
     }
 
-    router.push("/crews");
+    router.push(nextPage());
+    router.refresh();
+  }
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-[#1a3a2a] flex items-center justify-center">
+        <div
+          className="w-6 h-6 border-2 border-[#4ade80]/30 border-t-[#4ade80] rounded-full animate-spin"
+          role="status"
+          aria-label="Loading"
+        />
+      </div>
+    );
   }
 
   return (
@@ -185,7 +237,10 @@ export default function SetupPage() {
                 htmlFor="location"
                 className="text-sm font-medium text-white/70"
               >
-                Home location
+                Home location{" "}
+                <span className="text-[#4d7a5d] font-normal">
+                  (optional, used for Meet in the Middle)
+                </span>
               </label>
               <div className="relative">
                 <input

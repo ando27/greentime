@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import CrewsClient from "./CrewsClient";
+import LoadError from "@/components/LoadError";
+import { loadProfile } from "@/lib/profile";
 
 export default async function CrewsPage() {
   const supabase = await createClient();
@@ -11,13 +13,22 @@ export default async function CrewsPage() {
 
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("display_name, home_lat, home_lng, home_label")
-    .eq("id", user.id)
-    .single();
+  const { profile, error: profileError } = await loadProfile(supabase, user.id);
 
-  if (!profile?.display_name) redirect("/setup");
+  // The lookup failed (network, database not set up...). Show that, with a
+  // retry. Do NOT send the user to setup: they may already have a profile.
+  if (profileError) {
+    return (
+      <LoadError
+        title="Couldn't load your profile"
+        message={profileError}
+        retryHref="/crews"
+      />
+    );
+  }
+
+  // No profile row yet → first-time setup
+  if (!profile) redirect("/setup");
 
   // Fetch user's memberships with group info
   const { data: memberships } = await supabase
@@ -58,12 +69,7 @@ export default async function CrewsPage() {
     <CrewsClient
       userId={user.id}
       initialCrews={crews}
-      profile={{
-        displayName: profile.display_name,
-        homeLat: profile.home_lat ?? null,
-        homeLng: profile.home_lng ?? null,
-        homeLabel: profile.home_label ?? null,
-      }}
+      profile={profile}
     />
   );
 }

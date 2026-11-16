@@ -102,14 +102,28 @@ export function formatMoney(amount: number | null): string {
   return `$${n % 1 === 0 ? n : n.toFixed(2)}`;
 }
 
+/**
+ * The moment an event tees off, read as LOCAL time on this device.
+ * Built from number parts on purpose: new Date("2026-07-04T08:00") style
+ * strings are parsed inconsistently (date-only strings are treated as UTC).
+ */
+export function teeOffDate(eventDate: string, teeTime: string): Date {
+  const [ey, em, ed] = eventDate.split("-").map(Number);
+  const [eh, emin] = teeTime.split(":").map(Number);
+  return new Date(ey, em - 1, ed, eh, emin || 0, 0);
+}
+
+/**
+ * True only between (tee time − cutoffHours) and the tee time itself.
+ * Before the window opens, or after tee-off, it is false (no bail).
+ */
 export function isWithinCutoff(
   eventDate: string,
   teeTime: string,
-  cutoffHours: number
+  cutoffHours: number,
+  now: number = Date.now()
 ): boolean {
-  const [ey, em, ed] = eventDate.split("-").map(Number);
-  const [eh, emin] = teeTime.split(":").map(Number);
-  const dt = new Date(ey, em - 1, ed, eh, emin, 0);
-  const hoursUntil = (dt.getTime() - Date.now()) / 3_600_000;
+  const hoursUntil =
+    (teeOffDate(eventDate, teeTime).getTime() - now) / 3_600_000;
   return hoursUntil >= 0 && hoursUntil <= cutoffHours;
 }

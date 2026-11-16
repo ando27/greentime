@@ -78,6 +78,12 @@ One entry per TODO item, each its own commit.
 - One shared `toYMD()` helper built from local date parts (`getFullYear`, `getMonth`, `getDate`). The duplicate copies in the availability calendar and heat map now use it
 - Verified: 8:30pm in New York and Los Angeles gives today's date (the old way gave tomorrow)
 
+### P1-2: Bail window timezone check
+- Confirmed the tee time is read as local time. It is built from number parts (`new Date(y, m, d, h, min)`), not by parsing a `date + 'T' + time` string, so there is no UTC surprise. Pulled into a named `teeOffDate()` helper with the rule written down
+- Tested in four time zones: 25h before tee-off = no bail, 24h and 23h and 1 minute before = bail, 1 minute after tee-off = no bail
+- Bail logging hardened (shipped with P0-8): the RSVP is saved first, then the bail; a failed bail write is reported; the database allows only one bail per member per event, and the app loads the existing one if it hits that limit
+- Note: "local" means the phone or computer of the person tapping. Fine for a crew in one time zone
+
 <!--NEXT-->
 
 ---

@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
+import { joinCrewByCode } from "@/lib/crews";
+import { useToast } from "@/components/Toast";
 import type { UserProfile } from "./CrewsClient";
 
 interface Props {
@@ -14,6 +16,7 @@ interface Props {
 
 export default function JoinCrewModal({ userId, profile, onClose, onSuccess }: Props) {
   const supabase = createClient();
+  const toast = useToast();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -41,43 +44,14 @@ export default function JoinCrewModal({ userId, profile, onClose, onSuccess }: P
     setLoading(true);
 
     try {
-      // Look up group by invite code
-      const { data: group, error: groupError } = await supabase
-        .from("groups")
-        .select("id, name")
-        .eq("invite_code", trimmedCode)
-        .single();
-
-      if (groupError || !group) {
-        throw new Error("Crew not found. Check the code and try again.");
-      }
-
-      // Check if already a member
-      const { data: existing } = await supabase
-        .from("members")
-        .select("id")
-        .eq("group_id", group.id)
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (existing) {
-        throw new Error("You're already a member of this crew.");
-      }
-
-      // Insert member record
-      const { error: memberError } = await supabase.from("members").insert({
-        group_id: group.id,
-        user_id: userId,
-        name: profile.displayName,
-        is_admin: false,
-        home_lat: profile.homeLat,
-        home_lng: profile.homeLng,
-        home_label: profile.homeLabel,
-      });
-
-      if (memberError) throw memberError;
-
-      onSuccess(group.id);
+      // Reuses the existing member row if the user is already in this crew
+      const result = await joinCrewByCode(supabase, userId, profile, trimmedCode);
+      toast.success(
+        result.alreadyMember
+          ? `You're already in ${result.groupName}. Opening it.`
+          : `Joined ${result.groupName}`
+      );
+      onSuccess(result.groupId);
     } catch (err) {
       setError(friendlyError(err));
       setLoading(false);

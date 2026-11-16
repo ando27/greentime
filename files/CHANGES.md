@@ -65,6 +65,12 @@ One entry per TODO item, each its own commit.
 - Fixed: a profile with a location on the equator/prime meridian (lat or lng of 0) was treated as having no location
 - Location search box extracted into one shared component (`src/components/LocationInput.tsx`) used by setup, profile, and the crew screen, with "Searching…", "No places found", and "not responding, try again" states. The old code swallowed search errors
 
+### P0-9: Duplicate member guard (was F-10)
+- Joining a crew you're already in no longer shows an error. It reuses your existing member row and opens the crew
+- If that existing row has no home location but your profile does, the location is copied over
+- If two joins race (double tap, two tabs), the new `members (group_id, user_id)` unique constraint blocks the second row and the app recovers by reusing the first
+- Join logic moved to one function (`joinCrewByCode` in `src/lib/crews.ts`), shared by the join dialog and invite links
+
 <!--NEXT-->
 
 ---

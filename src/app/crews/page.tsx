@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import CrewsClient from "./CrewsClient";
 import LoadError from "@/components/LoadError";
 import { loadProfile } from "@/lib/profile";
+import { loadCrews } from "@/lib/crews";
 
 export default async function CrewsPage() {
   const supabase = await createClient();
@@ -30,45 +31,13 @@ export default async function CrewsPage() {
   // No profile row yet → first-time setup
   if (!profile) redirect("/setup");
 
-  // Fetch user's memberships with group info
-  const { data: memberships } = await supabase
-    .from("members")
-    .select("group_id, is_admin, groups(id, name)")
-    .eq("user_id", user.id);
-
-  const groupIds = (memberships ?? [])
-    .map((m) => m.group_id)
-    .filter((id): id is string => Boolean(id));
-
-  // Count all members per group in one query
-  let memberCountMap: Record<string, number> = {};
-  if (groupIds.length > 0) {
-    const { data: allMembers } = await supabase
-      .from("members")
-      .select("group_id")
-      .in("group_id", groupIds);
-
-    for (const m of allMembers ?? []) {
-      if (m.group_id) {
-        memberCountMap[m.group_id] = (memberCountMap[m.group_id] ?? 0) + 1;
-      }
-    }
-  }
-
-  const crews = (memberships ?? []).map((m) => {
-    const group = m.groups as unknown as { id: string; name: string } | null;
-    return {
-      groupId: group?.id ?? "",
-      name: group?.name ?? "",
-      isAdmin: m.is_admin ?? false,
-      memberCount: memberCountMap[m.group_id] ?? 0,
-    };
-  });
+  const { crews, error: crewsError } = await loadCrews(supabase, user.id);
 
   return (
     <CrewsClient
       userId={user.id}
       initialCrews={crews}
+      initialError={crewsError}
       profile={profile}
     />
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { UserProfile } from "./CrewsClient";
 
@@ -9,6 +8,7 @@ interface Props {
   userId: string;
   profile: UserProfile;
   onClose: () => void;
+  onSuccess: (groupId: string) => void;
 }
 
 function generateCode(): string {
@@ -19,8 +19,7 @@ function generateCode(): string {
   ).join("");
 }
 
-export default function CreateCrewModal({ userId, profile, onClose }: Props) {
-  const router = useRouter();
+export default function CreateCrewModal({ userId, profile, onClose, onSuccess }: Props) {
   const supabase = createClient();
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -84,7 +83,7 @@ export default function CreateCrewModal({ userId, profile, onClose }: Props) {
 
       if (memberError) throw memberError;
 
-      router.push(`/crews/${group.id}`);
+      onSuccess(group.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setLoading(false);

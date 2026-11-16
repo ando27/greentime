@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -8,19 +8,15 @@ import CreateCrewModal from "./CreateCrewModal";
 import JoinCrewModal from "./JoinCrewModal";
 import ProfileModal from "./ProfileModal";
 
-export interface Crew {
-  groupId: string;
-  name: string;
-  isAdmin: boolean;
-  memberCount: number;
-}
-
+export type { Crew } from "@/lib/crews";
+import { loadCrews, type Crew } from "@/lib/crews";
 export type { UserProfile } from "@/lib/profile";
 import type { UserProfile } from "@/lib/profile";
 
 interface Props {
   userId: string;
   initialCrews: Crew[];
+  initialError: string | null;
   profile: UserProfile;
 }
 
@@ -78,12 +74,62 @@ function CrewCard({ crew }: { crew: Crew }) {
   );
 }
 
-export default function CrewsClient({ userId, initialCrews, profile }: Props) {
+export default function CrewsClient({
+  userId,
+  initialCrews,
+  initialError,
+  profile,
+}: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [modal, setModal] = useState<"create" | "join" | null>(null);
   const [profileState, setProfileState] = useState<UserProfile>(profile);
   const [showProfile, setShowProfile] = useState(false);
+
+  // Crew list: starts with what the server loaded, then refreshes in the browser
+  const [crews, setCrews] = useState<Crew[]>(initialCrews);
+  const [crewsError, setCrewsError] = useState<string | null>(initialError);
+  const [crewsLoading, setCrewsLoading] = useState(false);
+
+  const refreshCrews = useCallback(
+    async (showSpinner: boolean) => {
+      if (showSpinner) setCrewsLoading(true);
+      const result = await loadCrews(supabase, userId);
+      if (result.error) {
+        setCrewsError(result.error);
+      } else {
+        setCrews(result.crews);
+        setCrewsError(null);
+      }
+      setCrewsLoading(false);
+    },
+    [supabase, userId]
+  );
+
+  // Refresh when the screen opens (also covers coming back with the browser's
+  // Back button, which can show an old copy of the list).
+  useEffect(() => {
+    let active = true;
+    loadCrews(supabase, userId).then((result) => {
+      if (!active) return;
+      if (result.error) {
+        setCrewsError(result.error);
+      } else {
+        setCrews(result.crews);
+        setCrewsError(null);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase, userId]);
+
+  // After creating or joining: refresh the list, then open the crew
+  function handleCrewAdded(groupId: string) {
+    setModal(null);
+    void refreshCrews(false);
+    router.push(`/crews/${groupId}`);
+  }
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -135,7 +181,36 @@ export default function CrewsClient({ userId, initialCrews, profile }: Props) {
 
       {/* Main content */}
       <main className="max-w-lg mx-auto px-4 py-8">
-        {initialCrews.length === 0 ? (
+        {crewsLoading ? (
+          /* Loading state */
+          <div
+            className="flex flex-col items-center gap-3 pt-16"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="w-6 h-6 border-2 border-[#4ade80]/30 border-t-[#4ade80] rounded-full animate-spin" />
+            <p className="text-[#4d7a5d] text-sm">Loading your crews…</p>
+          </div>
+        ) : crewsError && crews.length === 0 ? (
+          /* Error state */
+          <div
+            className="flex flex-col items-center text-center gap-4 pt-12"
+            role="alert"
+          >
+            <h2 className="text-white font-semibold text-lg">
+              Couldn&apos;t load your crews
+            </h2>
+            <p className="text-red-400 text-sm max-w-xs break-words">
+              {crewsError}
+            </p>
+            <button
+              onClick={() => refreshCrews(true)}
+              className="bg-[#4ade80] text-[#0f2018] font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-[#6ee7a0] active:scale-[0.98] transition-all"
+            >
+              Try again
+            </button>
+          </div>
+        ) : crews.length === 0 ? (
           /* Empty state */
           <div className="flex flex-col items-center text-center gap-6 pt-12">
             <GolfFlagIcon />
@@ -183,8 +258,24 @@ export default function CrewsClient({ userId, initialCrews, profile }: Props) {
                 </button>
               </div>
             </div>
+            {crewsError && (
+              <div
+                role="alert"
+                className="mb-4 flex items-center justify-between gap-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2"
+              >
+                <span className="break-words min-w-0">
+                  Couldn&apos;t refresh your crews: {crewsError}
+                </span>
+                <button
+                  onClick={() => refreshCrews(true)}
+                  className="shrink-0 underline"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
             <div className="flex flex-col gap-3">
-              {initialCrews.map((crew) => (
+              {crews.map((crew) => (
                 <CrewCard key={crew.groupId} crew={crew} />
               ))}
             </div>
@@ -196,15 +287,17 @@ export default function CrewsClient({ userId, initialCrews, profile }: Props) {
       {modal === "create" && (
         <CreateCrewModal
           userId={userId}
-          profile={profile}
+          profile={profileState}
           onClose={() => setModal(null)}
+          onSuccess={handleCrewAdded}
         />
       )}
       {modal === "join" && (
         <JoinCrewModal
           userId={userId}
-          profile={profile}
+          profile={profileState}
           onClose={() => setModal(null)}
+          onSuccess={handleCrewAdded}
         />
       )}
       {showProfile && (

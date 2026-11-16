@@ -43,6 +43,13 @@ One entry per TODO item, each its own commit.
 - Home location is now optional at setup (it can be added later from the profile), so a location-search outage can't block account creation
 - New `src/lib/errors.ts` turns Supabase/network errors into readable messages
 
+### P0-6: Crew list loading
+- Crews load with `members.select('*, groups(*)').eq('user_id', user.id)` through one helper (`src/lib/crews.ts`), used on the server for the first paint and in the browser for refreshes
+- Root cause found: a failed crew query was treated as "you have no crews" (errors were never checked), and the list only ever came from the server, so coming back to it could show an old copy
+- Added a loading state, the empty state, and an error state with "Try again". If a refresh fails while crews are already showing, a small banner appears instead of wiping the list
+- The list refreshes when the screen opens and after creating or joining a crew
+- Create/Join now use the latest profile (name and location) even if it was edited moments earlier on the same screen
+
 <!--NEXT-->
 
 ---

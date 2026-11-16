@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import type { DBEvent } from "./types";
 
 interface Props {
@@ -65,7 +66,7 @@ export default function EditEventModal({ event, onClose, onSuccess }: Props) {
 
       onSuccess(data as DBEvent);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(friendlyError(err, "Couldn't save the event."));
       setLoading(false);
     }
   }

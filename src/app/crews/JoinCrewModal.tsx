@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import type { UserProfile } from "./CrewsClient";
 
 interface Props {
@@ -78,7 +79,7 @@ export default function JoinCrewModal({ userId, profile, onClose, onSuccess }: P
 
       onSuccess(group.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(friendlyError(err));
       setLoading(false);
     }
   }

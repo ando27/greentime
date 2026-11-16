@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/safeNext";
+import { friendlyError } from "@/lib/errors";
 
 function GreenTimeLogo() {
   return (
@@ -82,7 +83,7 @@ function SignupForm() {
     });
 
     if (signUpError) {
-      setError(signUpError.message);
+      setError(friendlyError(signUpError));
       setLoading(false);
       return;
     }

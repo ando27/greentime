@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/Toast";
 import EventCard from "./EventCard";
 import CreateEventModal from "./CreateEventModal";
 import EditEventModal from "./EditEventModal";
@@ -70,7 +71,7 @@ export default function CrewDetail({
 }: Props) {
   const router = useRouter();
   const supabase = createClient();
-
+  const toast = useToast();
   const [tab, setTab] = useState<Tab>("events");
   const [events, setEvents] = useState<DBEvent[]>(initialEvents);
   const [rsvps, setRsvps] = useState<DBRsvp[]>(initialRsvps);
@@ -164,22 +165,42 @@ export default function CrewDetail({
     setCancelLoading(true);
     const id = cancelTarget.id;
 
-    await supabase.from("bail_log").delete().eq("event_id", id);
-    await supabase.from("rsvps").delete().eq("event_id", id);
-    const { error } = await supabase.from("events").delete().eq("id", id);
-
-    if (!error) {
-      setEvents((prev) => prev.filter((e) => e.id !== id));
-      setRsvps((prev) => prev.filter((r) => r.event_id !== id));
-      setBailLog((prev) => prev.filter((b) => b.event_id !== id));
-      setCancelTarget(null);
-    }
+    // Deleting the event also removes its RSVPs and bails (database cascade).
+    // .select() lets us confirm a row was really deleted: a blocked delete
+    // returns no error, just zero rows.
+    const { data: deleted, error } = await supabase
+      .from("events")
+      .delete()
+      .eq("id", id)
+      .select("id");
     setCancelLoading(false);
+
+    if (error) {
+      toast.error(error, "Couldn't cancel the event.");
+      return;
+    }
+    if (!deleted || deleted.length === 0) {
+      toast.error(
+        "Couldn't cancel the event. It may already be gone, or you may not have permission."
+      );
+      return;
+    }
+
+    setEvents((prev) => prev.filter((e) => e.id !== id));
+    setRsvps((prev) => prev.filter((r) => r.event_id !== id));
+    setBailLog((prev) => prev.filter((b) => b.event_id !== id));
+    setCancelTarget(null);
+    toast.success("Event cancelled");
   }
 
   async function handleSignOut() {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error(error, "Couldn't sign out.");
+      return;
+    }
     router.push("/login");
+    router.refresh();
   }
 
   return (
@@ -248,7 +269,6 @@ export default function CrewDetail({
             members={initialMembers}
             currentMember={currentMember}
             isAdmin={currentMember.is_admin}
-            groupId={group.id}
             onRsvpChange={handleRsvpChange}
             onRsvpDelete={handleRsvpDelete}
             onBailLogAdd={handleBailLogAdd}
@@ -384,7 +404,6 @@ function EventsTab({
   members,
   currentMember,
   isAdmin,
-  groupId: _groupId,
   onRsvpChange,
   onRsvpDelete,
   onBailLogAdd,
@@ -400,7 +419,6 @@ function EventsTab({
   members: DBMember[];
   currentMember: DBMember;
   isAdmin: boolean;
-  groupId: string;
   onRsvpChange: (r: DBRsvp) => void;
   onRsvpDelete: (rsvpId: string) => void;
   onBailLogAdd: (b: DBBailLog) => void;
@@ -504,6 +522,7 @@ function MembersTab({
   inviteCode: string;
   bailLog: DBBailLog[];
 }) {
+  const toast = useToast();
   const [copied, setCopied] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -514,10 +533,13 @@ function MembersTab({
   }
 
   function handleCopy() {
-    navigator.clipboard.writeText(inviteCode).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    navigator.clipboard
+      .writeText(inviteCode)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => toast.error(`Couldn't copy. The code is ${inviteCode}`));
   }
 
   return (

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/safeNext";
+import { friendlyError } from "@/lib/errors";
 
 // Messages for the ?error= codes sent back by /auth/callback
 const LINK_ERRORS: Record<string, string> = {
@@ -130,7 +131,7 @@ function LoginForm() {
       await supabase.auth.signInWithPassword({ email, password });
 
     if (signInError) {
-      setError(signInError.message);
+      setError(friendlyError(signInError));
       setLoading(false);
       return;
     }
@@ -155,7 +156,7 @@ function LoginForm() {
     setLoading(false);
 
     if (otpError) {
-      setError(otpError.message);
+      setError(friendlyError(otpError));
     } else {
       setMagicSent(true);
     }
@@ -168,7 +169,7 @@ function LoginForm() {
     const { data, error: anonError } = await supabase.auth.signInAnonymously();
 
     if (anonError) {
-      setError(anonError.message);
+      setError(friendlyError(anonError));
       setLoading(false);
       return;
     }

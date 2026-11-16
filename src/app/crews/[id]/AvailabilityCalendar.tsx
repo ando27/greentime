@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/Toast";
 import { formatDate, type DBAvailability, type DBMember } from "./types";
 
 interface Props {
@@ -52,6 +53,7 @@ export default function AvailabilityCalendar({
   onAvailabilityChange,
 }: Props) {
   const supabase = createClient();
+  const toast = useToast();
   const myRowsRef = useRef<DBAvailability[]>(initialAvailability);
 
   const today = new Date();
@@ -134,6 +136,7 @@ export default function AvailabilityCalendar({
           .delete()
           .eq("id", existingId);
         if (error) {
+          toast.error(error, "Couldn't update your availability.");
           setAvailMap((prev) => new Map(prev).set(key, existingId));
         } else {
           myRowsRef.current = myRowsRef.current.filter(
@@ -153,6 +156,7 @@ export default function AvailabilityCalendar({
           .select("id")
           .single();
         if (error) {
+          toast.error(error, "Couldn't save your availability.");
           setAvailMap((prev) => {
             const next = new Map(prev);
             next.delete(key);

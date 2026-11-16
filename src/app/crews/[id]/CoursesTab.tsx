@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/Toast";
 import type { DBMember, CourseItem } from "./types";
 
 export type { CourseItem };
@@ -91,6 +92,7 @@ function courseKey(c: CourseItem) {
 
 export default function CoursesTab({ currentMember, groupId, initialFavorites, onBookCourse }: Props) {
   const supabase = createClient();
+  const toast = useToast();
   const router = useRouter();
 
   const [location, setLocation] = useState(currentMember.home_label ?? "");
@@ -141,8 +143,11 @@ export default function CoursesTab({ currentMember, groupId, initialFavorites, o
       .update({ favorite_courses: updated })
       .eq("id", groupId);
 
-    if (!error) {
+    if (error) {
+      toast.error(error, "Couldn't save that favorite.");
+    } else {
       setFavorites(updated);
+      toast.success(`${course.name} added to crew favorites`);
       router.refresh();
     }
     setFavPending((p) => {
@@ -163,7 +168,9 @@ export default function CoursesTab({ currentMember, groupId, initialFavorites, o
       .update({ favorite_courses: next })
       .eq("id", groupId);
 
-    if (!error) {
+    if (error) {
+      toast.error(error, "Couldn't remove that favorite.");
+    } else {
       setFavorites(next);
       router.refresh();
     }

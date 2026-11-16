@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import type { UserProfile } from "./CrewsClient";
 
 interface Props {
@@ -38,11 +39,12 @@ export default function CreateCrewModal({ userId, profile, onClose, onSuccess }:
   async function getUniqueCode(): Promise<string> {
     for (let i = 0; i < 10; i++) {
       const code = generateCode();
-      const { data } = await supabase
+      const { data, error: codeError } = await supabase
         .from("groups")
         .select("id")
         .eq("invite_code", code)
         .maybeSingle();
+      if (codeError) throw codeError;
       if (!data) return code;
     }
     throw new Error("Could not generate a unique invite code. Try again.");
@@ -85,7 +87,7 @@ export default function CreateCrewModal({ userId, profile, onClose, onSuccess }:
 
       onSuccess(group.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(friendlyError(err));
       setLoading(false);
     }
   }

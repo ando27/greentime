@@ -50,6 +50,14 @@ One entry per TODO item, each its own commit.
 - The list refreshes when the screen opens and after creating or joining a crew
 - Create/Join now use the latest profile (name and location) even if it was edited moments earlier on the same screen
 
+### P0-8: Error surfacing everywhere
+- New shared helper: `useToast()` from `src/components/Toast.tsx` (`toast.error(err, fallback)` and `toast.success(msg)`), mounted once in the root layout. `friendlyError()` in `src/lib/errors.ts` makes messages readable ("Can't reach the server. Check your connection", "You're offline", "You don't have permission")
+- Every Supabase call now checks `error` and shows it. Previously silent: RSVP in/out/remove, bail log and bail reversal, availability toggles, favorite add/remove, event cancel, auto-RSVP on event create, sign out, invite-code uniqueness check
+- RSVP failures used to be swallowed by an empty `catch` ("silently fail"). They now show a toast and the buttons stay as they were
+- Cancel event now confirms a row was actually deleted (a blocked delete returns no error, just zero rows) and relies on the database cascade for RSVPs and bails
+- Small behavior change: un-tapping "In" inside the cutoff window now logs a bail, the same as tapping "Out". Before, it was a way to drop out without a bail
+- Done out of order (before P0-7) because P0-7's "saved" confirmation uses the toast
+
 <!--NEXT-->
 
 ---

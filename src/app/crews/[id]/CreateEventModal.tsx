@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/Toast";
+import { friendlyError } from "@/lib/errors";
 import type { DBEvent, DBMember, DBRsvp, CourseItem } from "./types";
 
 interface Props {
@@ -34,6 +36,7 @@ export default function CreateEventModal({
   onSuccess,
 }: Props) {
   const supabase = createClient();
+  const toast = useToast();
   const [form, setForm] = useState({
     ...EMPTY_FORM,
     courseName: initialCourseName ?? "",
@@ -88,7 +91,7 @@ export default function CreateEventModal({
       let autoRsvps: DBRsvp[] = [];
 
       if (otherMembers.length > 0) {
-        const { data: avail } = await supabase
+        const { data: avail, error: availErr } = await supabase
           .from("availability")
           .select("member_id")
           .in(
@@ -96,6 +99,11 @@ export default function CreateEventModal({
             otherMembers.map((m) => m.id)
           )
           .eq("avail_date", form.eventDate);
+
+        // The event itself is saved. If auto-RSVP fails, say so and carry on.
+        if (availErr) {
+          toast.error(availErr, "Event created, but auto-RSVP couldn't run.");
+        }
 
         const availIds = new Set((avail ?? []).map((a) => a.member_id));
 
@@ -111,17 +119,21 @@ export default function CreateEventModal({
           }));
 
         if (toInsert.length > 0) {
-          const { data: inserted } = await supabase
+          const { data: inserted, error: rsvpErr } = await supabase
             .from("rsvps")
             .insert(toInsert)
             .select();
+          if (rsvpErr) {
+            toast.error(rsvpErr, "Event created, but auto-RSVP couldn't be saved.");
+          }
           autoRsvps = (inserted ?? []) as DBRsvp[];
         }
       }
 
+      toast.success("Event created");
       onSuccess(newEvent as DBEvent, autoRsvps);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(friendlyError(err, "Couldn't create the event."));
       setLoading(false);
     }
   }

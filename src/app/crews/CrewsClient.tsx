@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import CreateCrewModal from "./CreateCrewModal";
 import JoinCrewModal from "./JoinCrewModal";
 import ProfileModal from "./ProfileModal";
+import { useToast } from "@/components/Toast";
 
 export type { Crew } from "@/lib/crews";
 import { loadCrews, type Crew } from "@/lib/crews";
@@ -82,6 +83,7 @@ export default function CrewsClient({
 }: Props) {
   const router = useRouter();
   const supabase = createClient();
+  const toast = useToast();
   const [modal, setModal] = useState<"create" | "join" | null>(null);
   const [profileState, setProfileState] = useState<UserProfile>(profile);
   const [showProfile, setShowProfile] = useState(false);
@@ -132,8 +134,13 @@ export default function CrewsClient({
   }
 
   async function handleSignOut() {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error(error, "Couldn't sign out.");
+      return;
+    }
     router.push("/login");
+    router.refresh();
   }
 
   return (

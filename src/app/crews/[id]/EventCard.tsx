@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/Toast";
+import { isDuplicateError } from "@/lib/errors";
 import {
   formatDate,
   formatTime,
@@ -69,6 +71,7 @@ export default function EventCard({
   onCancelRequest,
 }: Props) {
   const supabase = createClient();
+  const toast = useToast();
   const [rsvpLoading, setRsvpLoading] = useState(false);
 
   const myRsvp = rsvps.find((r) => r.member_id === currentMember.id) ?? null;
@@ -86,61 +89,70 @@ export default function EventCard({
     }, {})
   );
 
-  async function handleRsvp(newStatus: "in" | "out") {
-    if (rsvpLoading) return;
+  // Logs a bail for the current member on this event (at most one, ever).
+  async function logBail() {
+    if (bailLog.some((b) => b.member_id === currentMember.id)) return;
 
-    // Deselect: clicking the already-active status removes the RSVP entirely
-    if (myRsvp?.status === newStatus) {
-      setRsvpLoading(true);
-      try {
-        await supabase.from("rsvps").delete().eq("id", myRsvp.id);
-        onRsvpDelete(myRsvp.id);
-      } catch {
-        // ignore
-      } finally {
-        setRsvpLoading(false);
+    const { data: bailEntry, error } = await supabase
+      .from("bail_log")
+      .insert({
+        event_id: event.id,
+        member_id: currentMember.id,
+        group_id: event.group_id,
+        amount_owed: event.greens_fee ?? 0,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (!isDuplicateError(error)) {
+        toast.error(error, "Your RSVP changed, but the bail couldn't be logged.");
+        return;
       }
+      // The database already has a bail for this member + event (unique
+      // constraint). Load it so the card shows it.
+      const { data: existing, error: readError } = await supabase
+        .from("bail_log")
+        .select()
+        .eq("event_id", event.id)
+        .eq("member_id", currentMember.id)
+        .maybeSingle();
+      if (readError) toast.error(readError, "Couldn't load the bail log.");
+      else if (existing) onBailLogAdd(existing as DBBailLog);
       return;
     }
+    if (bailEntry) onBailLogAdd(bailEntry as DBBailLog);
+  }
 
+  async function handleRsvp(newStatus: "in" | "out") {
+    if (rsvpLoading) return;
     setRsvpLoading(true);
 
+    // Decide once, up front, whether we are inside the bail window
+    const withinCutoff = isWithinCutoff(
+      event.event_date,
+      event.tee_time,
+      event.cutoff_hours
+    );
     const now = new Date().toISOString();
+
     try {
-      // Bail check: in → out within cutoff window
-      if (
-        myRsvp?.status === "in" &&
-        newStatus === "out" &&
-        isWithinCutoff(event.event_date, event.tee_time, event.cutoff_hours) &&
-        !bailLog.some((b) => b.member_id === currentMember.id)
-      ) {
-        const { data: bailEntry } = await supabase
-          .from("bail_log")
-          .insert({
-            event_id: event.id,
-            member_id: currentMember.id,
-            group_id: event.group_id,
-            amount_owed: event.greens_fee ?? 0,
-          })
-          .select()
-          .single();
-        if (bailEntry) onBailLogAdd(bailEntry as DBBailLog);
+      // Deselect: tapping the already-active status removes the RSVP entirely
+      if (myRsvp?.status === newStatus) {
+        const { error } = await supabase
+          .from("rsvps")
+          .delete()
+          .eq("id", myRsvp.id);
+        if (error) throw error;
+        onRsvpDelete(myRsvp.id);
+        // Un-tapping "In" inside the cutoff is dropping out, same as tapping Out
+        if (newStatus === "in" && withinCutoff) await logBail();
+        return;
       }
 
-      // Bail reversal (E-07): out → in within cutoff window removes the bail entry
-      if (
-        newStatus === "in" &&
-        isWithinCutoff(event.event_date, event.tee_time, event.cutoff_hours)
-      ) {
-        const existingBail = bailLog.find((b) => b.member_id === currentMember.id);
-        if (existingBail) {
-          await supabase.from("bail_log").delete().eq("id", existingBail.id);
-          onBailLogRemove(existingBail.id);
-        }
-      }
-
+      // 1. Save the RSVP
       if (!myRsvp) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("rsvps")
           .insert({
             event_id: event.id,
@@ -152,9 +164,10 @@ export default function EventCard({
           })
           .select()
           .single();
-        if (data) onRsvpChange(data as DBRsvp);
+        if (error) throw error;
+        onRsvpChange(data as DBRsvp);
       } else {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("rsvps")
           .update({
             status: newStatus,
@@ -166,10 +179,34 @@ export default function EventCard({
           .eq("id", myRsvp.id)
           .select()
           .single();
-        if (data) onRsvpChange(data as DBRsvp);
+        if (error) throw error;
+        onRsvpChange(data as DBRsvp);
       }
-    } catch {
-      // silently fail — UI is optimistic enough
+
+      // 2. Bail: In → Out inside the cutoff window. Never outside it.
+      if (myRsvp?.status === "in" && newStatus === "out" && withinCutoff) {
+        await logBail();
+      }
+
+      // 3. Bail reversal (E-07): back In inside the cutoff window removes the bail
+      if (newStatus === "in" && withinCutoff) {
+        const existingBail = bailLog.find(
+          (b) => b.member_id === currentMember.id
+        );
+        if (existingBail) {
+          const { error } = await supabase
+            .from("bail_log")
+            .delete()
+            .eq("id", existingBail.id);
+          if (error) {
+            toast.error(error, "You're back In, but the bail couldn't be removed.");
+          } else {
+            onBailLogRemove(existingBail.id);
+          }
+        }
+      }
+    } catch (err) {
+      toast.error(err, "Couldn't save your RSVP.");
     } finally {
       setRsvpLoading(false);
     }

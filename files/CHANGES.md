@@ -1,5 +1,17 @@
 # GreenTime Dev Log
-Last updated: 2026-06-12
+Last updated: 2026-11-16
+
+---
+
+## Mon Nov 16, 2026 — P0 (sign-in, profiles, groups) + P1 (bugs)
+
+One entry per TODO item, each its own commit.
+
+### P0-1: Repo audit
+- Mapped the codebase and added a "Repo map" section to `files/CLAUDE.md` (router, Supabase clients, auth handling, where each feature lives)
+- Finding: this app is server-rendered with cookie sessions, so there was no `onAuthStateChange` deadlock to remove. The real causes of the P0 symptoms are listed under each item below
+
+<!--NEXT-->
 
 ---
 

@@ -1,5 +1,5 @@
 # GreenTime — Project Handoff & Context Document
-Last updated: 2026-06-12
+Last updated: 2026-11-16
 
 This document exists so any new Claude conversation can pick up exactly where we left off without losing context. Read this before doing anything.
 
@@ -82,6 +82,49 @@ Migration from single HTML to Next.js is complete. Active development is now in 
 - New users: email → set password → display name + location setup → crew list
 - Existing users: email → password → crew list
 - Magic link path: email → check email screen → crew list
+
+---
+
+## Repo map
+
+Audited 2026-11-16 (P0-1). This repo root IS the Next.js app (there is no `greentime-next/` subfolder here).
+
+**Router:** Next.js 16 App Router (`src/app/`), React 19, Tailwind v4, TypeScript. No Pages Router.
+
+**Supabase clients (cookie-based sessions via `@supabase/ssr`):**
+- `src/lib/supabase/client.ts` — the ONE shared browser client. Every client component calls `createClient()` and gets the same instance.
+- `src/lib/supabase/server.ts` — per-request server client for Server Components and route handlers.
+- `src/proxy.ts` — runs on every request (Next 16's name for middleware). Refreshes the session cookie, sends signed-out users to `/login`, and signed-in users away from `/login` and `/signup`.
+
+**Auth state:**
+- The session lives in cookies, so a page refresh keeps the user signed in (the proxy + server components read it).
+- `src/components/AuthListener.tsx` — mounted once in `src/app/layout.tsx`. Calls `getSession()` on load and listens to `onAuthStateChange`. It never awaits Supabase inside the callback (known supabase-js deadlock).
+- `src/app/auth/callback/route.ts` — where magic links and email confirmations land.
+
+**Where each feature lives:**
+
+| Feature | Files |
+|---|---|
+| Sign in (password, magic link, guest) | `src/app/login/page.tsx` |
+| Create account | `src/app/signup/page.tsx` |
+| First-run profile setup | `src/app/setup/page.tsx` |
+| Profile read/save helpers | `src/lib/profile.ts` |
+| Crew list, create, join, edit profile | `src/app/crews/` (`page.tsx` loads on the server, `CrewsClient.tsx` renders and refreshes) |
+| Join / create crew logic | `src/lib/crews.ts` |
+| Invite link landing page | `src/app/join/[code]/` |
+| One crew (tabs: events, members, availability, courses) | `src/app/crews/[id]/` (`page.tsx` loads data, `CrewDetail.tsx` is the screen) |
+| Events, RSVP, bails | `EventCard.tsx`, `CreateEventModal.tsx`, `EditEventModal.tsx` |
+| Availability + heat map | `AvailabilityCalendar.tsx`, `GroupOverlapHeatmap.tsx` |
+| Course search, favorites, Meet in the Middle | `CoursesTab.tsx`, `MeetInTheMiddle.tsx`, `src/lib/geo.ts` |
+| Location search box (shared) | `src/components/LocationInput.tsx` |
+| Nominatim / Overpass server proxies | `src/app/api/nominatim/route.ts`, `src/app/api/overpass/route.ts` |
+| Error + success toasts (shared) | `src/components/Toast.tsx`, `src/lib/errors.ts` |
+| Date helpers (local time, never UTC) | `src/app/crews/[id]/types.ts` |
+| Database rebuild script | `supabase/schema.sql` |
+
+**Docs:** `files/CLAUDE.md` (this file), `files/TODO.md` (priority list), `files/CHANGES.md` (changelog — add an entry per item).
+
+**Guests:** "Continue as guest" uses Supabase anonymous sign-in, so a guest has a real `auth.uid()` and goes through the same profile setup as everyone else. There are no `user_id = null` member rows created by this app.
 
 ---
 

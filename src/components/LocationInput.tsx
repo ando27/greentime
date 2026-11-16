@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { searchPlaces, type Place } from "@/lib/geo";
 import type { HomeLocation } from "@/lib/profile";
 
-const DEBOUNCE_MS = 450;
+// Wait this long after the last keystroke before searching (Nominatim allows
+// at most 1 request per second; see src/lib/geo.ts)
+const DEBOUNCE_MS = 600;
 
 interface Props {
   id: string;

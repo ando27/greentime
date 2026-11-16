@@ -84,6 +84,13 @@ One entry per TODO item, each its own commit.
 - Bail logging hardened (shipped with P0-8): the RSVP is saved first, then the bail; a failed bail write is reported; the database allows only one bail per member per event, and the app loads the existing one if it hits that limit
 - Note: "local" means the phone or computer of the person tapping. Fine for a crew in one time zone
 
+### P1-3: Nominatim usage rules
+- Location search now goes through our own server route (`/api/nominatim`), which sends a proper identifying `User-Agent` and `Referer` on every request. A browser can't set `User-Agent` itself, and the old Vercel rewrite sent no identification
+- Max one request per second, enforced in three places: the input waits 600ms after the last keystroke (debounce), the browser spaces searches at least 1.1s apart and drops ones made stale by further typing, and the server route queues requests 1.1s apart
+- Results are cached (in the browser for the session, on Vercel's edge for a day), so repeat searches don't hit Nominatim at all
+- "Searching…" state, a clear "No places found" message, and a "not responding, try again" message, in the shared location box and in course search
+- Course search from your saved home location skips the lookup entirely (coordinates are already known)
+
 <!--NEXT-->
 
 ---

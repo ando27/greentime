@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
+import { searchPlaces } from "@/lib/geo";
 import type { DBMember, CourseItem } from "./types";
 
 export type { CourseItem };
@@ -33,19 +34,6 @@ function haversineDistance(
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-async function geocode(query: string): Promise<{ lat: number; lng: number } | null> {
-  try {
-    const url = `/api/nominatim?format=json&limit=1&q=${encodeURIComponent(query)}`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data.length) return null;
-    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-  } catch {
-    return null;
-  }
 }
 
 async function fetchNearbyCourses(lat: number, lng: number): Promise<CourseItem[]> {
@@ -115,18 +103,44 @@ export default function CoursesTab({ currentMember, groupId, initialFavorites, o
     setSearchError(null);
     setHasSearched(false);
 
-    try {
-      const coords = await geocode(query);
-      if (!coords) {
-        setSearchError("Location not found. Try a city, zip code, or address.");
+    // Step 1: turn the text into coordinates
+    let coords: { lat: number; lng: number } | null = null;
+    if (
+      query === currentMember.home_label &&
+      currentMember.home_lat != null &&
+      currentMember.home_lng != null
+    ) {
+      // Searching from the saved home location: no lookup needed
+      coords = { lat: currentMember.home_lat, lng: currentMember.home_lng };
+    } else {
+      try {
+        const places = await searchPlaces(query, 1);
+        coords = places[0] ?? null;
+      } catch {
+        setSearchError(
+          "Location search isn't responding. Check your connection and try again."
+        );
+        setSearching(false);
         return;
       }
+    }
+
+    if (!coords) {
+      setSearchError(
+        `No place found for "${query}". Try a city and state, or a zip code.`
+      );
+      setSearching(false);
+      return;
+    }
+
+    // Step 2: find courses near those coordinates
+    try {
       setSearchOrigin(coords);
       const courses = await fetchNearbyCourses(coords.lat, coords.lng);
       setResults(courses);
       setHasSearched(true);
     } catch {
-      setSearchError("Search failed. Please try again.");
+      setSearchError("Course search failed. Please try again.");
     } finally {
       setSearching(false);
     }

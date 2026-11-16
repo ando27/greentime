@@ -11,6 +11,15 @@ One entry per TODO item, each its own commit.
 - Mapped the codebase and added a "Repo map" section to `files/CLAUDE.md` (router, Supabase clients, auth handling, where each feature lives)
 - Finding: this app is server-rendered with cookie sessions, so there was no `onAuthStateChange` deadlock to remove. The real causes of the P0 symptoms are listed under each item below
 
+### P0-2: Consolidated schema file
+- New `supabase/schema.sql` rebuilds the whole database from an empty project in one run (safe to run twice)
+- All 9 tables (the 7 core tables plus `suggestions` and `suggestion_upvotes`) with constraints, foreign keys with cascade deletes, and value checks
+- New unique constraints: `members (group_id, user_id)` and `bail_log (event_id, member_id)`
+- `upsert_user_profile` RPC now returns the saved row
+- RLS on for every table with select/insert/update/delete policies written out. Open to any signed-in user (guests included), nothing for signed-out visitors; `user_profiles` is write-your-own-row only. P2 tightens the rest
+- Indexes on `members.user_id`, `members.group_id`, and `group_id` on every child table
+- Verified by running it twice against a local Postgres 16 with stand-in `auth` objects: duplicate member rejected, other users' profiles not writable, signed-out role denied
+
 <!--NEXT-->
 
 ---

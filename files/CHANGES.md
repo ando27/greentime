@@ -100,7 +100,9 @@ One entry per TODO item, each its own commit.
 - Course search and Meet in the Middle share one fetch-and-parse function (`fetchGolfCourses` in `src/lib/geo.ts`) instead of two copies
 - NOT verified against live Overpass: the build sandbox couldn't reach any Overpass server. Verified here: bad input is rejected, and when every server fails the route falls through all three and returns a clean error in about 16s. Test course search on the deployed site
 
-<!--NEXT-->
+### Not verified end to end
+- No Supabase project was available during this work (the new one isn't set up yet), so sign-in, profile, crew, RSVP and location flows were checked by type-check, lint, production build and reading the code, not by clicking through. Run the checklist in `files/TODO.md` after the Supabase setup
+- P1-5 (invite link) not started; notes are in `files/TODO.md`
 
 ---
 

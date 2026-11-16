@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { fetchGolfCourses } from "@/lib/geo";
+import { friendlyError } from "@/lib/errors";
 import type { DBMember, CourseItem } from "./types";
 
 interface Props {
@@ -83,36 +85,9 @@ const SEARCH_RADIUS_M = Math.round(25 * 1609.34);
 const MAX_RESULTS = 5;
 
 async function fetchCourses(lat: number, lng: number): Promise<CourseItem[]> {
-  const query = `[out:json][timeout:25];(node["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});way["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});relation["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng}););out center tags;`;
-
-  const res = await fetch(`/api/overpass?data=${encodeURIComponent(query)}`);
-  if (!res.ok) throw new Error("Overpass API error");
-  const data = await res.json();
-
-  return (data.elements as Array<Record<string, unknown>>)
-    .map((el) => {
-      const tags = (el.tags ?? {}) as Record<string, string>;
-      const name = tags.name ?? tags["name:en"] ?? "Unnamed Course";
-      const elLat =
-        typeof el.lat === "number"
-          ? el.lat
-          : el.center != null
-          ? (el.center as Record<string, number>).lat
-          : null;
-      const elLng =
-        typeof el.lon === "number"
-          ? el.lon
-          : el.center != null
-          ? (el.center as Record<string, number>).lon
-          : null;
-      if (elLat == null || elLng == null) return null;
-      const item: CourseItem = { name, lat: elLat, lng: elLng };
-      const city = tags["addr:city"];
-      const state = tags["addr:state"];
-      if (city || state) item.address = [city, state].filter(Boolean).join(", ");
-      return item;
-    })
-    .filter((c): c is NonNullable<typeof c> => c !== null)
+  const courses = await fetchGolfCourses(lat, lng, SEARCH_RADIUS_M);
+  // Copy before sorting: the list is shared with the session cache
+  return [...courses]
     .sort((a, b) => haversine(lat, lng, a.lat, a.lng) - haversine(lat, lng, b.lat, b.lng))
     .slice(0, MAX_RESULTS);
 }
@@ -306,8 +281,8 @@ export default function MeetInTheMiddle({ members, isAdmin, onBookCourse }: Prop
       setCentroidResult(buildResult(cPt, cCourses, located));
       setMinimaxResult(buildResult(mPt, mCourses, located));
       setStatus("done");
-    } catch {
-      setError("Failed to fetch courses. Please try again.");
+    } catch (err) {
+      setError(friendlyError(err, "Failed to fetch courses. Please try again."));
       setStatus("error");
     }
   }

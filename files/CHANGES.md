@@ -91,6 +91,15 @@ One entry per TODO item, each its own commit.
 - "Searching…" state, a clear "No places found" message, and a "not responding, try again" message, in the shared location box and in course search
 - Course search from your saved home location skips the lookup entirely (coordinates are already known)
 
+### P1-4: Overpass reliability
+- Course search now goes through our own server route (`/api/overpass`) instead of a plain rewrite to overpass-api.de
+- 12 second timeout per attempt. If a server times out or errors, it retries on a backup: overpass-api.de → overpass.kumi.systems → maps.mail.ru. If all fail, the user sees "Course search is unavailable right now" instead of hanging
+- Sends an identifying `User-Agent`, which is the likely fix for the HTTP 406 errors seen in June
+- Results cached per rounded lat/lng (2 decimals, about 1 km) and radius: in the browser for the session and on Vercel's edge for a day. Meet in the Middle with two members (both midpoints identical) now makes one request instead of two
+- The route builds the query itself from lat/lng/radius, so it can only be used to look up golf courses
+- Course search and Meet in the Middle share one fetch-and-parse function (`fetchGolfCourses` in `src/lib/geo.ts`) instead of two copies
+- NOT verified against live Overpass: the build sandbox couldn't reach any Overpass server. Verified here: bad input is rejected, and when every server fails the route falls through all three and returns a clean error in about 16s. Test course search on the deployed site
+
 <!--NEXT-->
 
 ---

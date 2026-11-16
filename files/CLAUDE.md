@@ -111,7 +111,6 @@ Audited 2026-11-16 (P0-1). This repo root IS the Next.js app (there is no `green
 | Profile read/save helpers | `src/lib/profile.ts` |
 | Crew list, create, join, edit profile | `src/app/crews/` (`page.tsx` loads on the server, `CrewsClient.tsx` renders and refreshes) |
 | Join / create crew logic | `src/lib/crews.ts` |
-| Invite link landing page | `src/app/join/[code]/` |
 | One crew (tabs: events, members, availability, courses) | `src/app/crews/[id]/` (`page.tsx` loads data, `CrewDetail.tsx` is the screen) |
 | Events, RSVP, bails | `EventCard.tsx`, `CreateEventModal.tsx`, `EditEventModal.tsx` |
 | Availability + heat map | `AvailabilityCalendar.tsx`, `GroupOverlapHeatmap.tsx` |
@@ -328,8 +327,8 @@ Members tab shows name, admin badge, home location, and bail count. Cards are bu
 **Guest sign-in currently broken (2026-06-12):**
 "Continue as guest" on /login fails with "Anonymous sign-ins are disabled" — anonymous auth is switched off in the Supabase project settings. Either re-enable it in Supabase (Auth → Providers → Anonymous) or remove the button.
 
-**Overpass API flakiness (2026-06-12):**
-overpass-api.de returned HTTP 406 for all requests during local testing (course search and Meet in the Middle fail when this happens). maps.mail.ru/osm/tools/overpass/api/interpreter worked as a drop-in mirror. If users report course search failures, consider pointing the /api/overpass rewrite at a mirror or adding fallback.
+**Overpass API flakiness (addressed 2026-11-16, P1-4):**
+Course search goes through `src/app/api/overpass/route.ts`: 12s timeout per try, then automatic retry on backup servers (overpass-api.de → overpass.kumi.systems → maps.mail.ru), with an identifying User-Agent (the old 406 errors were most likely the missing User-Agent). Results are cached per rounded lat/lng + radius. Not yet confirmed against the live Overpass servers: the build sandbox could not reach any of them, so test course search on the deployed site.
 
 **Member cards bail count bug (fixed):**
 The original implementation fetched `bail_log` by `group_id` on the client, which returned empty rows due to RLS (policy only permits reads filtered by `event_id`). Fixed by passing the already-loaded `bailLog` state from `CrewDetail` directly to `MembersTab` and computing counts from it — no extra query needed.

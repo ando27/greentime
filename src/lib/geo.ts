@@ -71,3 +71,56 @@ export async function searchPlaces(
   placeCache.set(cacheKey, places);
   return places;
 }
+
+// ── Golf course search ───────────────────────────────────────────────────────
+
+export interface Course {
+  name: string;
+  lat: number;
+  lng: number;
+  address?: string;
+}
+
+// Results kept for the session, keyed by rounded position + radius, so
+// repeating a search (or two members near each other) costs nothing.
+const courseCache = new Map<string, Promise<Course[]>>();
+
+/**
+ * Finds golf courses within radiusMeters of a point. The server route adds a
+ * timeout and retries on backup servers. Throws with a readable message if
+ * every server fails.
+ */
+export function fetchGolfCourses(
+  lat: number,
+  lng: number,
+  radiusMeters: number
+): Promise<Course[]> {
+  // Round to 2 decimals (about 1 km / 0.7 mi): close enough for a 25-30 mile
+  // search, and it makes nearby searches share one cached answer.
+  const rLat = Math.round(lat * 100) / 100;
+  const rLng = Math.round(lng * 100) / 100;
+  const radius = Math.round(radiusMeters);
+  const key = `${rLat},${rLng},${radius}`;
+
+  const cached = courseCache.get(key);
+  if (cached) return cached;
+
+  const request = (async () => {
+    const res = await fetch(
+      `/api/overpass?lat=${rLat}&lng=${rLng}&radius=${radius}`
+    );
+    const body = (await res.json().catch(() => null)) as {
+      courses?: Course[];
+      error?: string;
+    } | null;
+    if (!res.ok || !body?.courses) {
+      throw new Error(body?.error ?? "Course search failed. Please try again.");
+    }
+    return body.courses;
+  })();
+
+  courseCache.set(key, request);
+  // Don't remember failures: the next try should ask again
+  request.catch(() => courseCache.delete(key));
+  return request;
+}

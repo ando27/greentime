@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
-import { searchPlaces } from "@/lib/geo";
+import { friendlyError } from "@/lib/errors";
+import { fetchGolfCourses, searchPlaces } from "@/lib/geo";
 import type { DBMember, CourseItem } from "./types";
 
 export type { CourseItem };
@@ -37,41 +38,13 @@ function haversineDistance(
 }
 
 async function fetchNearbyCourses(lat: number, lng: number): Promise<CourseItem[]> {
-  const query = `[out:json][timeout:25];(node["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});way["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng});relation["leisure"="golf_course"](around:${SEARCH_RADIUS_M},${lat},${lng}););out center tags;`;
-
-  const res = await fetch(`/api/overpass?data=${encodeURIComponent(query)}`);
-  if (!res.ok) throw new Error(`Overpass error ${res.status}`);
-  const data = await res.json();
-
-  return (data.elements as Array<Record<string, unknown>>)
-    .map((el) => {
-      const tags = (el.tags ?? {}) as Record<string, string>;
-      const name = tags.name ?? tags["name:en"] ?? "Unnamed Course";
-      const elLat =
-        typeof el.lat === "number"
-          ? el.lat
-          : typeof el.center === "object" && el.center !== null
-          ? (el.center as Record<string, number>).lat
-          : null;
-      const elLng =
-        typeof el.lon === "number"
-          ? el.lon
-          : typeof el.center === "object" && el.center !== null
-          ? (el.center as Record<string, number>).lon
-          : null;
-      if (elLat == null || elLng == null) return null;
-
-      const addrParts = [tags["addr:city"], tags["addr:state"]].filter(Boolean);
-      const item: CourseItem = { name, lat: elLat, lng: elLng };
-      if (addrParts.length) item.address = addrParts.join(", ");
-      return item;
-    })
-    .filter((c): c is NonNullable<typeof c> => c !== null)
-    .sort(
-      (a, b) =>
-        haversineDistance(lat, lng, a.lat, a.lng) -
-        haversineDistance(lat, lng, b.lat, b.lng)
-    );
+  const courses = await fetchGolfCourses(lat, lng, SEARCH_RADIUS_M);
+  // Copy before sorting: the list is shared with the session cache
+  return [...courses].sort(
+    (a, b) =>
+      haversineDistance(lat, lng, a.lat, a.lng) -
+      haversineDistance(lat, lng, b.lat, b.lng)
+  );
 }
 
 function courseKey(c: CourseItem) {
@@ -139,8 +112,8 @@ export default function CoursesTab({ currentMember, groupId, initialFavorites, o
       const courses = await fetchNearbyCourses(coords.lat, coords.lng);
       setResults(courses);
       setHasSearched(true);
-    } catch {
-      setSearchError("Course search failed. Please try again.");
+    } catch (err) {
+      setSearchError(friendlyError(err, "Course search failed. Please try again."));
     } finally {
       setSearching(false);
     }

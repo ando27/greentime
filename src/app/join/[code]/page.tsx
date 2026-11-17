@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadProfile } from "@/lib/profile";
-import { friendlyError } from "@/lib/errors";
+import { getInvitePreview } from "@/lib/crews";
 import AuthCard, { authButtonCls } from "@/components/AuthCard";
 import JoinInvite from "./JoinInvite";
 
@@ -47,13 +47,11 @@ export default async function JoinPage({
   if (profileError) return problem("Couldn't load your profile", profileError);
   if (!profile) redirect(`/setup?next=${encodeURIComponent(here)}`);
 
-  const { data: group, error: groupError } = await supabase
-    .from("groups")
-    .select("id, name")
-    .eq("invite_code", code)
-    .maybeSingle();
-  if (groupError) return problem("Couldn't open the invite", friendlyError(groupError));
-  if (!group) {
+  // Non-members can't read the groups table, so the lookup goes through a
+  // database function that only reveals the crew for the right code.
+  const { preview, error: previewError } = await getInvitePreview(supabase, code);
+  if (previewError) return problem("Couldn't open the invite", previewError);
+  if (!preview) {
     return problem(
       "Crew not found",
       "This invite link doesn't match any crew. It may have been mistyped, or the crew was deleted."
@@ -61,28 +59,15 @@ export default async function JoinPage({
   }
 
   // Already in this crew → go straight in
-  const { data: existing, error: existingError } = await supabase
-    .from("members")
-    .select("id")
-    .eq("group_id", group.id)
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (existingError) return problem("Couldn't open the invite", friendlyError(existingError));
-  if (existing) redirect(`/crews/${group.id}`);
-
-  const { count } = await supabase
-    .from("members")
-    .select("id", { count: "exact", head: true })
-    .eq("group_id", group.id);
+  if (preview.alreadyMember) redirect(`/crews/${preview.groupId}`);
 
   return (
     <AuthCard subtitle="Crew invite">
       <JoinInvite
-        userId={user.id}
-        profile={profile}
+        displayName={profile.displayName}
         code={code}
-        crewName={group.name}
-        memberCount={count ?? 0}
+        crewName={preview.groupName}
+        memberCount={preview.memberCount}
       />
     </AuthCard>
   );

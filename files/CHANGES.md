@@ -3,6 +3,44 @@ Last updated: 2026-11-16
 
 ---
 
+## Tue Nov 17, 2026 — P2: Security
+
+Status: code and database scripts are done and tested. Step A is applied to the live database. Step B (the actual lock-down) is NOT applied yet: it has to go live together with this code. See "Cutover" below.
+
+### P2-3: Join-by-code RPC (plus create and preview)
+- New database functions, applied to the live project (additive, changes no permissions): `join_group_by_code(code, display_name)`, `create_group(name)`, `get_invite_preview(code)`, and the helpers the policies use (`is_group_member`, `is_group_admin`, `owns_member`, `owns_member_in`, `shares_group_with`)
+- The app now creates crews, joins by code, and shows invite pages only through these functions (`src/lib/crews.ts`). They are what let a non-member join once non-members can no longer read the tables
+- Invite codes are now generated in the database, from letters and digits that can't be mistaken for each other (no I, O, 0, 1)
+
+### P2-2: Tighten RLS (script ready, not yet applied)
+- `supabase/migrations/20261117_p2b_tighten_rls.sql`. After it runs:
+  - You can only see and change data in crews you belong to
+  - You can only change your own member row, availability, RSVPs and bails
+  - Only crew admins can rename or delete the crew, remove members, or change who is an admin
+  - Crews are created and joined only through the functions above
+  - Profiles: readable by you and your crewmates, writable only by you
+- Two database triggers protect things policies can't: a member can't make themselves admin or move a membership; a non-admin can't change the crew name or invite code (any member can still save crew favorites)
+- Admins and an event's creator can add RSVPs for other members, which is what auto-RSVP needs
+- Known gap, accepted for now: a member can remove their own bail through the database directly (the app only offers that inside the cutoff window)
+- Undo script: `supabase/migrations/20261117_p2b_rollback_open_rls.sql`
+- `supabase/schema.sql` now builds the tightened version for fresh projects
+
+### P2-1: Guests
+- "Continue as guest" already used Supabase anonymous sign-in, so guests have a real identity and are covered by the same rules. It is "just enter your name": location has been optional since P0-5
+- New: a guest can save their account. A "Guest account" prompt on My Crews opens the profile, where adding an email and password turns the guest into a normal account with the same crews, availability and RSVPs
+
+### Tested
+- Rules: 56 checks on a local Postgres copy with an admin, a member, an outsider and a signed-out visitor, run against both the migration scripts and `schema.sql`. Every "blocked" case was confirmed blocked for the intended reason. The undo script was run too
+- App: 19 checks in a real browser against the live database (still on the old open rules) with the new code: create crew, invite code, create event, join by code, wrong code, RSVP in/out, join twice, guest by invite link with just a name, guest saves account and signs in elsewhere with the email
+- NOT yet tested: the app against the tightened rules on the live database. That can only happen at cutover, because the rules and the code have to go live together
+
+### Cutover (needs Justin's go-ahead)
+1. Merge `p2-security` to `main` (the new code works with the old rules too, so nothing breaks at this point)
+2. Apply `20261117_p2b_tighten_rls.sql` to the live database
+3. Re-run the browser checks against the live site's database straight away; if anything fails, run the undo script
+
+---
+
 ## Tue Nov 17, 2026 — Console error check, forgot password, invite link (P1-5)
 
 Tested for real this time: the app ran against the live Supabase project in a browser, signed in as the two "ZZTest (Claude)" accounts (their passwords were reset to a random value for this; no real account was touched).

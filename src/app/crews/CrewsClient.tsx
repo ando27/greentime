@@ -18,6 +18,7 @@ interface Props {
   userId: string;
   initialCrews: Crew[];
   initialError: string | null;
+  isGuest: boolean;
   profile: UserProfile;
 }
 
@@ -79,6 +80,7 @@ export default function CrewsClient({
   userId,
   initialCrews,
   initialError,
+  isGuest,
   profile,
 }: Props) {
   const router = useRouter();
@@ -87,6 +89,7 @@ export default function CrewsClient({
   const [modal, setModal] = useState<"create" | "join" | null>(null);
   const [profileState, setProfileState] = useState<UserProfile>(profile);
   const [showProfile, setShowProfile] = useState(false);
+  const [guest, setGuest] = useState(isGuest);
 
   // Crew list: starts with what the server loaded, then refreshes in the browser
   const [crews, setCrews] = useState<Crew[]>(initialCrews);
@@ -188,6 +191,19 @@ export default function CrewsClient({
 
       {/* Main content */}
       <main className="max-w-lg mx-auto px-4 py-8">
+        {guest && (
+          <button
+            onClick={() => setShowProfile(true)}
+            className="w-full mb-6 text-left rounded-xl border border-amber-400/30 bg-amber-400/5 px-4 py-3 hover:bg-amber-400/10 transition-colors"
+          >
+            <span className="block text-sm font-medium text-amber-300">
+              Guest account
+            </span>
+            <span className="block text-xs text-[#4d7a5d] mt-0.5">
+              Add an email to keep your crews and sign in on other devices →
+            </span>
+          </button>
+        )}
         {crewsLoading ? (
           /* Loading state */
           <div
@@ -293,16 +309,12 @@ export default function CrewsClient({
       {/* Modals */}
       {modal === "create" && (
         <CreateCrewModal
-          userId={userId}
-          profile={profileState}
           onClose={() => setModal(null)}
           onSuccess={handleCrewAdded}
         />
       )}
       {modal === "join" && (
         <JoinCrewModal
-          userId={userId}
-          profile={profileState}
           onClose={() => setModal(null)}
           onSuccess={handleCrewAdded}
         />
@@ -312,8 +324,10 @@ export default function CrewsClient({
           userId={userId}
           initialProfile={profileState}
           onClose={() => setShowProfile(false)}
-          onSuccess={(updated) => {
+          isGuest={guest}
+          onSuccess={(updated, accountSaved) => {
             setProfileState(updated);
+            if (accountSaved) setGuest(false);
             setShowProfile(false);
           }}
         />

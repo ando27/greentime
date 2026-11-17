@@ -9,9 +9,11 @@ import { friendlyError } from "@/lib/errors";
 
 interface Props {
   userId: string;
+  /** true for a guest (anonymous sign-in) who hasn't added an email yet */
+  isGuest: boolean;
   initialProfile: UserProfile;
   onClose: () => void;
-  onSuccess: (updated: UserProfile) => void;
+  onSuccess: (updated: UserProfile, accountSaved: boolean) => void;
 }
 
 const inputCls =
@@ -19,6 +21,7 @@ const inputCls =
 
 export default function ProfileModal({
   userId,
+  isGuest,
   initialProfile,
   onClose,
   onSuccess,
@@ -46,6 +49,8 @@ export default function ProfileModal({
   const [showPassword, setShowPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  // Guests only: the email to attach to this account
+  const [guestEmail, setGuestEmail] = useState("");
 
   const handleClose = useCallback(() => onClose(), [onClose]);
 
@@ -69,6 +74,22 @@ export default function ProfileModal({
       setError(
         "Pick your home location from the suggestions, or clear the box to remove it."
       );
+      return;
+    }
+
+    // A guest saving their account needs both an email and a password
+    const savingGuestAccount = isGuest && guestEmail.trim() !== "";
+    if (savingGuestAccount) {
+      if (!/^\S+@\S+\.\S+$/.test(guestEmail.trim())) {
+        setError("Enter a valid email address.");
+        return;
+      }
+      if (!newPassword) {
+        setError("Choose a password to go with your email.");
+        return;
+      }
+    } else if (isGuest && newPassword) {
+      setError("Enter your email to save your account.");
       return;
     }
 
@@ -114,7 +135,26 @@ export default function ProfileModal({
         );
       }
 
-      if (newPassword) {
+      let accountNote = "";
+      if (savingGuestAccount) {
+        // Turns the guest into a normal account. Same user, so crews,
+        // availability and RSVPs all stay.
+        const { data: upgraded, error: upgradeError } =
+          await supabase.auth.updateUser({
+            email: guestEmail.trim(),
+            password: newPassword,
+          });
+        if (upgradeError) {
+          throw new Error(
+            "Profile saved, but your account couldn't be saved: " +
+              friendlyError(upgradeError)
+          );
+        }
+        accountNote =
+          upgraded.user?.email === guestEmail.trim()
+            ? ` Account saved: sign in with ${guestEmail.trim()} from now on.`
+            : ` Check ${guestEmail.trim()} for a link to confirm your email.`;
+      } else if (newPassword) {
         const { error: pwError } = await supabase.auth.updateUser({
           password: newPassword,
         });
@@ -132,11 +172,11 @@ export default function ProfileModal({
           ? ` Updated in ${crewCount} ${crewCount === 1 ? "crew" : "crews"}.`
           : "";
       toast.success(
-        saved.homeLabel
+        (saved.homeLabel
           ? `Saved. Home location: ${saved.homeLabel}.${crewNote}`
-          : `Saved. No home location set.${crewNote}`
+          : `Saved. No home location set.${crewNote}`) + accountNote
       );
-      onSuccess(saved);
+      onSuccess(saved, savingGuestAccount);
     } catch (err) {
       setError(friendlyError(err, "Couldn't save your profile."));
       setIsSubmitting(false);
@@ -205,6 +245,49 @@ export default function ProfileModal({
             </p>
           </div>
 
+          {isGuest ? (
+            /* Guests: attach an email + password to keep this account */
+            <div className="flex flex-col gap-3 rounded-lg border border-amber-400/30 bg-amber-400/5 p-3">
+              <div>
+                <p className="text-sm font-medium text-amber-300">
+                  You&apos;re using a guest account
+                </p>
+                <p className="text-xs text-[#4d7a5d] mt-0.5">
+                  Add an email and password to keep your crews and sign in on
+                  other devices. Nothing you&apos;ve done is lost.
+                </p>
+              </div>
+              <input
+                type="email"
+                inputMode="email"
+                value={guestEmail}
+                onChange={(e) => setGuestEmail(e.target.value)}
+                placeholder="you@example.com"
+                autoComplete="email"
+                aria-label="Email"
+                className={inputCls}
+              />
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Password (at least 8 characters)"
+                autoComplete="new-password"
+                aria-label="Password"
+                className={inputCls}
+              />
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm password"
+                autoComplete="new-password"
+                aria-label="Confirm password"
+                className={inputCls}
+              />
+            </div>
+          ) : (
+          <>
           {/* Password section */}
           <div className="flex flex-col gap-3">
             <button
@@ -254,6 +337,8 @@ export default function ProfileModal({
               </div>
             )}
           </div>
+          </>
+          )}
 
           {error && (
             <p className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">

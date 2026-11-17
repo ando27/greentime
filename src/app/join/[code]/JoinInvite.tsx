@@ -7,12 +7,10 @@ import { createClient } from "@/lib/supabase/client";
 import { joinCrewByCode } from "@/lib/crews";
 import { friendlyError } from "@/lib/errors";
 import { useToast } from "@/components/Toast";
-import type { UserProfile } from "@/lib/profile";
 import { authButtonCls, authErrorCls } from "@/components/AuthCard";
 
 interface Props {
-  userId: string;
-  profile: UserProfile;
+  displayName: string;
   code: string;
   crewName: string;
   memberCount: number;
@@ -22,8 +20,7 @@ interface Props {
 // button press (not just by opening the link), so link previews and
 // prefetching can never add someone to a crew.
 export default function JoinInvite({
-  userId,
-  profile,
+  displayName,
   code,
   crewName,
   memberCount,
@@ -39,7 +36,7 @@ export default function JoinInvite({
     setError("");
     setLoading(true);
     try {
-      const result = await joinCrewByCode(supabase, userId, profile, code);
+      const result = await joinCrewByCode(supabase, code);
       toast.success(
         result.alreadyMember
           ? `You're already in ${result.groupName}. Opening it.`
@@ -64,7 +61,7 @@ export default function JoinInvite({
       </h2>
       <p className="text-[#4d7a5d] text-sm mb-6">
         {memberCount} {memberCount === 1 ? "member" : "members"} · joining as{" "}
-        <span className="text-white/70">{profile.displayName}</span>
+        <span className="text-white/70">{displayName}</span>
       </p>
 
       {error && (

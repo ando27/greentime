@@ -38,6 +38,7 @@ export default async function CrewsPage() {
       userId={user.id}
       initialCrews={crews}
       initialError={crewsError}
+      isGuest={user.is_anonymous === true}
       profile={profile}
     />
   );

@@ -30,9 +30,9 @@ Code is done and live on `main`. The existing Supabase project was kept and upgr
 
 ## P2: Security (before inviting real users)
 
-- ⬜ P2-1 · Anonymous sign-ins for guests. Note: "Continue as guest" already uses Supabase anonymous sign-in; it just needs enabling in Authentication → Sign In / Providers. Remaining work: a lighter "just enter your name" path and linking an email later.
-- ⬜ P2-2 · Tighten RLS. Members-only read/write per group; own member row, availability, RSVPs only; admin-only group edits and member removal; `user_profiles` readable by crewmates, writable by owner (the write half is already done in P0-2).
-- ⬜ P2-3 · Join-by-code RPC. Security-definer `join_group_by_code(code, display_name)` that finds the group and inserts the member row in one step. Swap it into `joinCrewByCode`.
+- 🟨 P2-1 · Guests — done in code: guests use anonymous sign-in, need only a name, and can save their account with an email later. Goes live with the P2 merge
+- 🟨 P2-2 · Tighten RLS — script written and tested locally (`supabase/migrations/20261117_p2b_tighten_rls.sql`); NOT applied to the live database yet. Apply right after the P2 code is merged
+- 🟨 P2-3 · Join-by-code RPC — functions applied to the live database; app code on branch `p2-security`
 
 ## P3: Mobile pass
 

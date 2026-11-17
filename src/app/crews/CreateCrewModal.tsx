@@ -3,24 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
-import type { UserProfile } from "./CrewsClient";
+import { createCrew } from "@/lib/crews";
 
 interface Props {
-  userId: string;
-  profile: UserProfile;
   onClose: () => void;
   onSuccess: (groupId: string) => void;
 }
 
-function generateCode(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  return Array.from(
-    { length: 6 },
-    () => chars[Math.floor(Math.random() * chars.length)]
-  ).join("");
-}
-
-export default function CreateCrewModal({ userId, profile, onClose, onSuccess }: Props) {
+export default function CreateCrewModal({ onClose, onSuccess }: Props) {
   const supabase = createClient();
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,20 +26,6 @@ export default function CreateCrewModal({ userId, profile, onClose, onSuccess }:
     return () => document.removeEventListener("keydown", handler);
   }, [handleClose]);
 
-  async function getUniqueCode(): Promise<string> {
-    for (let i = 0; i < 10; i++) {
-      const code = generateCode();
-      const { data, error: codeError } = await supabase
-        .from("groups")
-        .select("id")
-        .eq("invite_code", code)
-        .maybeSingle();
-      if (codeError) throw codeError;
-      if (!data) return code;
-    }
-    throw new Error("Could not generate a unique invite code. Try again.");
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -63,29 +39,10 @@ export default function CreateCrewModal({ userId, profile, onClose, onSuccess }:
     setLoading(true);
 
     try {
-      const inviteCode = await getUniqueCode();
-
-      const { data: group, error: groupError } = await supabase
-        .from("groups")
-        .insert({ name: trimmedName, invite_code: inviteCode })
-        .select("id")
-        .single();
-
-      if (groupError || !group) throw groupError ?? new Error("Insert failed");
-
-      const { error: memberError } = await supabase.from("members").insert({
-        group_id: group.id,
-        user_id: userId,
-        name: profile.displayName,
-        is_admin: true,
-        home_lat: profile.homeLat,
-        home_lng: profile.homeLng,
-        home_label: profile.homeLabel,
-      });
-
-      if (memberError) throw memberError;
-
-      onSuccess(group.id);
+      // One database call makes the crew, its invite code, and your admin
+      // membership together
+      const groupId = await createCrew(supabase, trimmedName);
+      onSuccess(groupId);
     } catch (err) {
       setError(friendlyError(err));
       setLoading(false);

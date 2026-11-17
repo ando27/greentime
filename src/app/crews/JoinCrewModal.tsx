@@ -5,16 +5,13 @@ import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import { joinCrewByCode } from "@/lib/crews";
 import { useToast } from "@/components/Toast";
-import type { UserProfile } from "./CrewsClient";
 
 interface Props {
-  userId: string;
-  profile: UserProfile;
   onClose: () => void;
   onSuccess: (groupId: string) => void;
 }
 
-export default function JoinCrewModal({ userId, profile, onClose, onSuccess }: Props) {
+export default function JoinCrewModal({ onClose, onSuccess }: Props) {
   const supabase = createClient();
   const toast = useToast();
   const [code, setCode] = useState("");
@@ -45,7 +42,7 @@ export default function JoinCrewModal({ userId, profile, onClose, onSuccess }: P
 
     try {
       // Reuses the existing member row if the user is already in this crew
-      const result = await joinCrewByCode(supabase, userId, profile, trimmedCode);
+      const result = await joinCrewByCode(supabase, trimmedCode);
       toast.success(
         result.alreadyMember
           ? `You're already in ${result.groupName}. Opening it.`

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { friendlyError, isDuplicateError } from "./errors";
+import { friendlyError } from "./errors";
 
 export interface Crew {
   groupId: string;
@@ -73,25 +73,19 @@ export interface JoinResult {
   alreadyMember: boolean;
 }
 
-interface JoinProfile {
-  displayName: string;
-  homeLat: number | null;
-  homeLng: number | null;
-  homeLabel: string | null;
-}
-
 /**
- * Joins a crew by invite code. Never creates a second member row for the same
- * user in the same crew:
- *  - already a member → reuse that row and enter the crew
- *  - existing row has no location but the profile does → copy it over
- *  - the database unique constraint (group_id, user_id) is the backstop
+ * Joins a crew by invite code, through the database function
+ * join_group_by_code (see supabase/schema.sql). The function finds the crew
+ * and adds the member row in one step, which is what lets a non-member join
+ * even though non-members cannot read the groups table.
+ *
+ * It never creates a second member row for the same user in the same crew:
+ * an existing membership is reused, and its home location is filled in from
+ * the profile if it was empty.
  * Throws an Error with a readable message on failure.
  */
 export async function joinCrewByCode(
   supabase: SupabaseClient,
-  userId: string,
-  profile: JoinProfile,
   rawCode: string
 ): Promise<JoinResult> {
   const code = rawCode.trim().toUpperCase();
@@ -99,71 +93,77 @@ export async function joinCrewByCode(
     throw new Error("Invite codes are 6 letters or numbers.");
   }
 
-  // 1. Find the crew
-  const { data: group, error: groupError } = await supabase
-    .from("groups")
-    .select("id, name")
-    .eq("invite_code", code)
-    .maybeSingle();
-  if (groupError) throw new Error(friendlyError(groupError));
-  if (!group) throw new Error("Crew not found. Check the code and try again.");
+  const { data, error } = await supabase.rpc("join_group_by_code", {
+    p_code: code,
+  });
+  if (error) throw new Error(friendlyError(error, "Couldn't join the crew."));
 
-  const findExisting = () =>
-    supabase
-      .from("members")
-      .select("id, home_lat, home_lng")
-      .eq("group_id", group.id)
-      .eq("user_id", userId)
-      .maybeSingle();
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | { group_id: string; group_name: string; already_member: boolean }
+    | undefined;
+  if (!row?.group_id) throw new Error("Couldn't join the crew. Please try again.");
 
-  // 2. Already a member? Reuse the row.
-  let { data: existing, error: existingError } = await findExisting();
-  if (existingError) throw new Error(friendlyError(existingError));
+  return {
+    groupId: row.group_id,
+    groupName: row.group_name,
+    alreadyMember: row.already_member,
+  };
+}
 
-  if (!existing) {
-    // 3. Not a member yet → add the row
-    const { error: insertError } = await supabase.from("members").insert({
-      group_id: group.id,
-      user_id: userId,
-      name: profile.displayName,
-      is_admin: false,
-      home_lat: profile.homeLat,
-      home_lng: profile.homeLng,
-      home_label: profile.homeLabel,
-    });
+/**
+ * Creates a crew through the database function create_group: it makes the
+ * crew, generates the invite code, and adds the caller as its admin, all in
+ * one step. Returns the new crew's id.
+ * Throws an Error with a readable message on failure.
+ */
+export async function createCrew(
+  supabase: SupabaseClient,
+  name: string
+): Promise<string> {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("Crew name is required.");
+  if (trimmed.length > 80) throw new Error("Crew name must be 80 characters or fewer.");
 
-    if (!insertError) {
-      return { groupId: group.id, groupName: group.name, alreadyMember: false };
-    }
-    // Lost a race with another tab/tap: the constraint blocked a duplicate,
-    // which means the row exists now. Fall through and reuse it.
-    if (!isDuplicateError(insertError)) {
-      throw new Error(friendlyError(insertError, "Couldn't join the crew."));
-    }
-    ({ data: existing, error: existingError } = await findExisting());
-    if (existingError) throw new Error(friendlyError(existingError));
+  const { data, error } = await supabase.rpc("create_group", { p_name: trimmed });
+  if (error) throw new Error(friendlyError(error, "Couldn't create the crew."));
+  if (typeof data !== "string" || !data) {
+    throw new Error("Couldn't create the crew. Please try again.");
   }
+  return data;
+}
 
-  // 4. Existing row has no location but the profile does → copy it over
-  const rowHasLocation =
-    existing?.home_lat != null && existing?.home_lng != null;
-  const profileHasLocation = profile.homeLat != null && profile.homeLng != null;
-  if (existing && !rowHasLocation && profileHasLocation) {
-    const { error: copyError } = await supabase
-      .from("members")
-      .update({
-        home_lat: profile.homeLat,
-        home_lng: profile.homeLng,
-        home_label: profile.homeLabel,
-      })
-      .eq("id", existing.id);
-    if (copyError) {
-      throw new Error(
-        "You're in the crew, but your home location couldn't be copied over: " +
-          friendlyError(copyError)
-      );
-    }
+export interface InvitePreview {
+  groupId: string;
+  groupName: string;
+  memberCount: number;
+  alreadyMember: boolean;
+}
+
+/**
+ * Looks up a crew by invite code without joining it (for the invite page).
+ * Returns null when the code matches no crew.
+ */
+export async function getInvitePreview(
+  supabase: SupabaseClient,
+  code: string
+): Promise<{ preview: InvitePreview | null; error: string | null }> {
+  const { data, error } = await supabase.rpc("get_invite_preview", {
+    p_code: code,
+  });
+  if (error) {
+    return { preview: null, error: friendlyError(error, "Couldn't open the invite.") };
   }
-
-  return { groupId: group.id, groupName: group.name, alreadyMember: true };
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | { group_id: string; group_name: string; member_count: number; already_member: boolean }
+    | undefined;
+  if (!row?.group_id) return { preview: null, error: null };
+  return {
+    preview: {
+      groupId: row.group_id,
+      groupName: row.group_name,
+      memberCount: row.member_count,
+      alreadyMember: row.already_member,
+    },
+    error: null,
+  };
 }

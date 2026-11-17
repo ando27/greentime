@@ -3,6 +3,38 @@ Last updated: 2026-11-16
 
 ---
 
+## Tue Nov 17, 2026 — P3: Mobile pass
+
+Method: an automated audit visits 17 screens at phone width and measures every button, link, input and piece of text. Before: 89 tap targets under 44px, 15 inputs under 16px, 24 pieces of text under 11px. After: zero, at both 375px and 320px wide. Screenshots were reviewed by eye as well.
+
+### P3-1: Tab bar
+- The app has four tabs (Events, Members, Availability, Courses), not six. They used to scroll sideways and "Courses" was cut off at 375px
+- Now four equal columns that always fit, down to 320px, with no sideways scrolling. Bails stay on each event card and the Members tab, so no merge was needed
+- Not done: a bottom navigation bar with icons. Four top tabs fit comfortably; revisit if a fifth tab is ever added
+
+### P3-2: Tap targets and text
+- Global rule in `src/app/globals.css`: on phones and touch screens every button, link and form control is at least 44px tall
+- All text is at least 11px (calendar day names, slot labels, counts, badges and Meet in the Middle bar labels were 8 to 10px)
+- Availability calendar rebuilt for touch: day columns widened from 60px to 84px; Morning / Afternoon / Twilight are full 44px buttons; the tiny "+1" crew badge is replaced by making the whole day header one large button
+- Long names: crew name and event course name clamp to two lines; member names, bail names and course names truncate with an ellipsis instead of pushing buttons off the row
+- Course cards on phones: the name gets its own line with the buttons underneath (names were being cut to about ten characters)
+- Course search shows the nearest 10 with "Show 10 more", instead of one list of 60 or more
+- Removed the greyed-out Zelle chip from the bail row (Zelle was removed earlier; the chip did nothing)
+
+### P3-3: Inputs on iOS and Android
+- Global rule: form text is 16px on phones, which stops iOS Safari zooming the page when a field is tapped
+- Email fields ask for the email keyboard with auto-capitals and autocorrect off; the invite code field capitalises automatically; Spots and Bail cutoff get the number pad; Greens fee gets the decimal pad
+- Date and time fields use the phone's native pickers and are full height
+- Tall dialogs (new event, edit event, profile) scroll inside the screen and size to the visible area on phones (`dvh`), so the Save button is always reachable
+
+### P3-4: Real-device test
+- NOT done: this needs a real iPhone and a real Android phone. Everything above was checked in a phone-sized Chrome window with touch emulation, which cannot show Safari's real behaviour (input zoom, the keyboard covering fields, date pickers)
+
+### Regression
+- The full 32-check browser run against the live database passes after these changes
+
+---
+
 ## Tue Nov 17, 2026 — P2: Security
 
 Status: DONE and live. Code merged to `main` (commit `950e03d`) and the lock-down applied to the live database on Nov 17. See "Cutover" below for how it went.

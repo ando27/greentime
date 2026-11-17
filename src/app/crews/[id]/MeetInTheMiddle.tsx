@@ -126,7 +126,7 @@ function DriveChart({
         const isLongest = miles === localMax;
         return (
           <div key={member.id} className="flex items-center gap-2">
-            <span className="text-[#4d7a5d] text-[10px] w-[4.5rem] shrink-0 truncate">
+            <span className="text-[#4d7a5d] text-[11px] w-[4.5rem] shrink-0 truncate">
               {member.name}
             </span>
             <div className="flex-1 h-1.5 bg-[#1a3a2a] rounded-full overflow-hidden">
@@ -135,7 +135,7 @@ function DriveChart({
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <span className="text-white/60 text-[10px] w-10 text-right shrink-0">
+            <span className="text-white/60 text-[11px] w-10 text-right shrink-0">
               {miles.toFixed(1)} mi
             </span>
           </div>
@@ -177,7 +177,7 @@ function CourseCard({
 
       <DriveChart drives={item.drives} globalMax={globalMax} />
 
-      <p className="text-[10px] text-[#4d7a5d]/70 mt-2">
+      <p className="text-[11px] text-[#4d7a5d]/70 mt-2">
         Longest drive:{" "}
         <span className="text-amber-400">{item.maxDrive.toFixed(1)} mi</span>
       </p>
@@ -240,7 +240,7 @@ function SectionHeader({
     <div className="mb-3">
       <div className="flex items-center gap-2 mb-0.5">
         <h2 className="text-white font-semibold text-sm">{label}</h2>
-        <span className="text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#4ade80]/10 border border-[#4ade80]/25 text-[#4ade80]">
+        <span className="text-[11px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#4ade80]/10 border border-[#4ade80]/25 text-[#4ade80]">
           {badge}
         </span>
       </div>
@@ -341,7 +341,7 @@ export default function MeetInTheMiddle({ members, isAdmin, onBookCourse }: Prop
             return (
               <span
                 key={m.id}
-                className={`text-[10px] font-medium px-2 py-1 rounded-full border ${
+                className={`text-[11px] font-medium px-2 py-1 rounded-full border ${
                   hasLoc
                     ? "border-[#4ade80]/30 text-[#4ade80] bg-[#4ade80]/5"
                     : "border-[#2d5040] text-[#4d7a5d]"

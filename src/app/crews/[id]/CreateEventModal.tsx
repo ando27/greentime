@@ -143,7 +143,7 @@ export default function CreateEventModal({
       className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 px-4 pb-4 sm:pb-0"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="bg-[#0f2018] border border-[#2d5040] rounded-2xl p-7 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-[#0f2018] border border-[#2d5040] rounded-2xl p-7 w-full max-w-md shadow-2xl max-h-[90dvh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-white font-semibold text-lg">New Event</h2>
           <button
@@ -235,6 +235,7 @@ export default function CreateEventModal({
             <Field label="Spots">
               <input
                 type="number"
+                inputMode="numeric"
                 value={form.spots}
                 min={1}
                 max={99}
@@ -249,6 +250,7 @@ export default function CreateEventModal({
                 </span>
                 <input
                   type="number"
+                inputMode="decimal"
                   value={form.greensFee}
                   min={0}
                   step="0.01"
@@ -263,6 +265,7 @@ export default function CreateEventModal({
           <Field label="Bail cutoff (hours before tee)">
             <input
               type="number"
+                inputMode="numeric"
               value={form.cutoffHours}
               min={0}
               onChange={(e) => set("cutoffHours", Number(e.target.value))}

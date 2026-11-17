@@ -74,6 +74,11 @@ function InputField({
       <input
         id={id}
         type={type}
+        // Email fields: @ keyboard, no auto-capitals, no autocorrect
+        inputMode={type === "email" ? "email" : undefined}
+        autoCapitalize={type === "email" ? "none" : undefined}
+        autoCorrect={type === "email" ? "off" : undefined}
+        spellCheck={type === "email" ? false : undefined}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}

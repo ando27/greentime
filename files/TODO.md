@@ -38,10 +38,10 @@ Code is done and live on `main`. The existing Supabase project was kept and upgr
 
 ## P3: Mobile pass
 
-- ⬜ P3-1 · Tab bar (the Next.js app has 4 tabs today: events, members, availability, courses)
-- ⬜ P3-2 · Tap targets and text. Buttons at least 44px tall, calendar count text at least 11px, long names truncate.
-- ⬜ P3-3 · Inputs on iOS and Android. Date/time inputs, email keyboard, inputs at 16px+ so the page doesn't zoom.
-- ⬜ P3-4 · Real-device test on an iPhone and an Android phone.
+- ✅ P3-1 · Tab bar — four equal-width tabs that fit down to 320px (the app has 4 tabs, not 6)
+- ✅ P3-2 · Tap targets and text — 44px minimum tap targets, 11px minimum text, long names truncate
+- ✅ P3-3 · Inputs on iOS and Android — 16px form text, right keyboards, native date/time pickers
+- ⬜ P3-4 · Real-device test on an iPhone and an Android phone — Justin. Checklist items to watch: tapping a field does not zoom the page; the keyboard does not hide the field or the Save button; date and time pickers work; the calendar scrolls sideways smoothly; "Share invite link" opens the share sheet
 
 ## P4: Features
 

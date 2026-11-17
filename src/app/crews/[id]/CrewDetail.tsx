@@ -264,18 +264,22 @@ export default function CrewDetail({
       {/* Crew name + tabs */}
       <div className="max-w-lg mx-auto px-4 pt-7 pb-0">
         <h1
-          className="text-3xl text-white mb-5"
+          className="text-3xl text-white mb-5 line-clamp-2 break-words"
           style={{ fontFamily: "var(--font-instrument-serif)" }}
+          title={group.name}
         >
           {group.name}
         </h1>
 
-        <div className="flex gap-1 border-b border-[#2d5040]/50 mb-6 overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none" }}>
+        {/* Four equal columns: always fits, down to 320px wide, no sideways scroll */}
+        <div className="grid grid-cols-4 border-b border-[#2d5040]/50 mb-6" role="tablist">
           {(["events", "members", "availability", "courses"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-2.5 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
+              role="tab"
+              aria-selected={tab === t}
+              className={`px-0.5 py-2.5 text-xs min-[360px]:text-[13px] min-[400px]:text-sm font-medium capitalize truncate transition-colors border-b-2 -mb-px ${
                 tab === t
                   ? "border-[#4ade80] text-[#4ade80]"
                   : "border-transparent text-[#4d7a5d] hover:text-white/60"
@@ -733,7 +737,7 @@ function MembersTab({
                 </span>
                 <span className="flex items-center gap-2 shrink-0">
                   {m.is_admin && (
-                    <span className="text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#4ade80]/10 border border-[#4ade80]/25 text-[#4ade80]">
+                    <span className="text-[11px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#4ade80]/10 border border-[#4ade80]/25 text-[#4ade80]">
                       Admin
                     </span>
                   )}

@@ -26,3 +26,38 @@ body {
   color: white;
   -webkit-font-smoothing: antialiased;
 }
+
+/* ── Mobile rules (P3) ───────────────────────────────────────────────────────
+   Applies on phones and any touch screen.
+   1. Tap targets: every button, link, and form control is at least 44px tall.
+   2. Form text is at least 16px. Anything smaller makes iOS Safari zoom the
+      whole page when the field is tapped.
+   Don't shrink these per-component; if something must be smaller, make the
+   whole row tappable instead. */
+@media (max-width: 639px), (pointer: coarse) {
+  button,
+  [role="button"],
+  select,
+  textarea,
+  input:not([type="checkbox"]):not([type="radio"]) {
+    min-height: 44px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Links are inline by default, and inline elements ignore min-height. This is
+   in the base layer so Tailwind classes like `block` or `flex` still win. */
+@layer base {
+  @media (max-width: 639px), (pointer: coarse) {
+    a[href] {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+    }
+  }
+}

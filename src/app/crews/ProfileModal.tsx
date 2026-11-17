@@ -188,7 +188,7 @@ export default function ProfileModal({
       className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 px-4 pb-4 sm:pb-0"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="bg-[#0f2018] border border-[#2d5040] rounded-2xl p-7 w-full max-w-sm shadow-2xl">
+      <div className="bg-[#0f2018] border border-[#2d5040] rounded-2xl p-7 w-full max-w-sm shadow-2xl max-h-[90dvh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-white font-semibold text-lg">Edit Profile</h2>
           <button

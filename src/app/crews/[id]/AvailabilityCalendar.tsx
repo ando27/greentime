@@ -189,7 +189,7 @@ export default function AvailabilityCalendar({
         <button
           onClick={goToPrev}
           disabled={atStart}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-[#4d7a5d] hover:text-white/70 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="w-11 h-11 flex items-center justify-center rounded-lg text-[#4d7a5d] hover:text-white/70 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           aria-label="Previous two weeks"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -205,7 +205,7 @@ export default function AvailabilityCalendar({
         <span className="text-white font-semibold text-sm">{rangeLabel}</span>
         <button
           onClick={goToNext}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-[#4d7a5d] hover:text-white/70 transition-colors"
+          className="w-11 h-11 flex items-center justify-center rounded-lg text-[#4d7a5d] hover:text-white/70 transition-colors"
           aria-label="Next two weeks"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -236,43 +236,53 @@ export default function AvailabilityCalendar({
           return (
             <div
               key={dateStr}
-              className={`flex-none w-[60px] flex flex-col items-center gap-1.5 bg-[#0f2018] border rounded-xl py-3 px-1.5 transition-colors ${
+              className={`flex-none w-[84px] flex flex-col items-stretch gap-1.5 bg-[#0f2018] border rounded-xl py-2 px-1.5 transition-colors ${
                 isExpanded ? "border-[#4ade80]/60" : "border-[#2d5040]"
               }`}
             >
-              {/* Day name */}
-              <span className="text-[9px] font-semibold uppercase tracking-wide text-[#4d7a5d]">
-                {dayName}
-              </span>
-
-              {/* Date number */}
-              <div
-                className={`w-7 h-7 flex items-center justify-center rounded-full text-sm font-semibold ${
-                  isToday ? "bg-[#4ade80] text-[#0f2018]" : "text-white/70"
-                }`}
-              >
-                {dayNum}
-              </div>
-
-              {/* Crew availability badge (AV-03) */}
-              {othersCount > 0 ? (
-                <button
-                  onClick={() =>
-                    setExpandedDate((prev) => (prev === dateStr ? null : dateStr))
-                  }
-                  aria-expanded={isExpanded}
-                  aria-label={`${othersCount} other ${othersCount === 1 ? "member" : "members"} available on ${dateStr}`}
-                  className={`h-[18px] min-w-[28px] px-1.5 flex items-center justify-center rounded-full text-[9px] font-bold leading-none transition-all active:scale-95 ${
-                    isExpanded
-                      ? "bg-[#4ade80] text-[#0f2018]"
-                      : "bg-[#4ade80]/10 border border-[#4ade80]/40 text-[#4ade80] hover:bg-[#4ade80]/20"
-                  }`}
-                >
-                  +{othersCount}
-                </button>
-              ) : (
-                <div className="h-[18px]" aria-hidden="true" />
-              )}
+              {/* Day header. When crewmates are free that day, the whole
+                  header is one big button that shows who (AV-03). */}
+              {(() => {
+                const header = (
+                  <>
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-[#4d7a5d]">
+                      {dayName}
+                    </span>
+                    <span
+                      className={`w-7 h-7 flex items-center justify-center rounded-full text-sm font-semibold ${
+                        isToday ? "bg-[#4ade80] text-[#0f2018]" : "text-white/70"
+                      }`}
+                    >
+                      {dayNum}
+                    </span>
+                    <span
+                      className={`h-[18px] min-w-[28px] px-1.5 flex items-center justify-center rounded-full text-[11px] font-bold leading-none ${
+                        othersCount === 0
+                          ? "invisible"
+                          : isExpanded
+                            ? "bg-[#4ade80] text-[#0f2018]"
+                            : "bg-[#4ade80]/10 border border-[#4ade80]/40 text-[#4ade80]"
+                      }`}
+                    >
+                      +{othersCount}
+                    </span>
+                  </>
+                );
+                return othersCount > 0 ? (
+                  <button
+                    onClick={() =>
+                      setExpandedDate((prev) => (prev === dateStr ? null : dateStr))
+                    }
+                    aria-expanded={isExpanded}
+                    aria-label={`${othersCount} other ${othersCount === 1 ? "member" : "members"} available on ${dateStr}`}
+                    className="flex flex-col items-center gap-1 py-1 rounded-lg hover:bg-[#4ade80]/5 active:scale-95 transition-all"
+                  >
+                    {header}
+                  </button>
+                ) : (
+                  <div className="flex flex-col items-center gap-1 py-1">{header}</div>
+                );
+              })()}
 
               {/* Time pills */}
               {SLOTS.map(({ key: slot, label }) => {
@@ -287,7 +297,7 @@ export default function AvailabilityCalendar({
                     disabled={isLoading}
                     aria-label={`${slot} on ${dateStr}`}
                     aria-pressed={isActive}
-                    className={`w-full rounded text-[9px] font-semibold py-1.5 leading-none transition-all ${
+                    className={`w-full h-11 rounded-lg text-[11px] font-semibold leading-none transition-all ${
                       isActive
                         ? "bg-[#4ade80] text-[#0f2018]"
                         : "border border-[#2d5040] text-white hover:border-[#4ade80]/50"
@@ -319,7 +329,7 @@ export default function AvailabilityCalendar({
                     {SLOTS.filter(({ key }) => slots.has(key)).map(({ key, label }) => (
                       <span
                         key={key}
-                        className="text-[9px] font-semibold px-2 py-1 rounded-full bg-[#4ade80]/10 border border-[#4ade80]/25 text-[#4ade80] leading-none"
+                        className="text-[11px] font-semibold px-2 py-1 rounded-full bg-[#4ade80]/10 border border-[#4ade80]/25 text-[#4ade80] leading-none"
                       >
                         {label}
                       </span>
@@ -336,17 +346,17 @@ export default function AvailabilityCalendar({
       <div className="flex items-center gap-4 justify-center">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded bg-[#4ade80]" />
-          <span className="text-[10px] text-[#4d7a5d]">Available</span>
+          <span className="text-[11px] text-[#4d7a5d]">Available</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded border border-[#2d5040]" />
-          <span className="text-[10px] text-[#4d7a5d]">Not marked</span>
+          <span className="text-[11px] text-[#4d7a5d]">Not marked</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="h-3 px-1 flex items-center rounded-full bg-[#4ade80]/10 border border-[#4ade80]/40 text-[#4ade80] text-[8px] font-bold leading-none">
+          <div className="h-4 px-1.5 flex items-center rounded-full bg-[#4ade80]/10 border border-[#4ade80]/40 text-[#4ade80] text-[11px] font-bold leading-none">
             +n
           </div>
-          <span className="text-[10px] text-[#4d7a5d]">Crew free</span>
+          <span className="text-[11px] text-[#4d7a5d]">Crew free</span>
         </div>
       </div>
     </div>

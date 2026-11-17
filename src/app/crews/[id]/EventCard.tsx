@@ -49,7 +49,7 @@ function PayLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-xs text-[#4ade80] border border-[#4ade80]/30 px-2 py-1 rounded-md hover:bg-[#4ade80]/10 transition-colors"
+      className="text-xs font-medium text-[#4ade80] border border-[#4ade80]/30 px-3 rounded-lg hover:bg-[#4ade80]/10 transition-colors"
     >
       {label}
     </a>
@@ -217,8 +217,11 @@ export default function EventCard({
       {/* Header row */}
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-start justify-between gap-3 mb-3">
-          <div>
-            <h3 className="text-white font-semibold text-base leading-tight">
+          <div className="min-w-0">
+            <h3
+              className="text-white font-semibold text-base leading-tight line-clamp-2 break-words"
+              title={event.course_name}
+            >
               {event.course_name}
             </h3>
             <p className="text-white/70 text-sm mt-0.5">
@@ -308,12 +311,14 @@ export default function EventCard({
                   key={entry.id}
                   className="flex items-center justify-between gap-3"
                 >
-                  <div>
-                    <span className="text-white/70 text-sm">{name}</span>
+                  <div className="min-w-0">
+                    <p className="text-white/70 text-sm truncate" title={name}>
+                      {name}
+                    </p>
                     {amount > 0 && (
-                      <span className="text-amber-400/80 text-sm ml-2">
+                      <p className="text-amber-400/80 text-sm">
                         {formatMoney(amount)}
-                      </span>
+                      </p>
                     )}
                   </div>
                   <div className="flex gap-1.5 shrink-0">
@@ -329,7 +334,6 @@ export default function EventCard({
                         />
                       </>
                     )}
-                    <PayLink label="Zelle" />
                   </div>
                 </div>
               );

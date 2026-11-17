@@ -18,6 +18,7 @@ interface Props {
 }
 
 const MILES_TO_METERS = 1609.34;
+const RESULTS_PAGE = 10;
 const SEARCH_RADIUS_M = Math.round(30 * MILES_TO_METERS);
 
 function haversineDistance(
@@ -60,6 +61,8 @@ export default function CoursesTab({ currentMember, groupId, initialFavorites, o
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [results, setResults] = useState<CourseItem[]>([]);
+  // Nearest courses first; show a page at a time so the list isn't endless on a phone
+  const [visibleCount, setVisibleCount] = useState(RESULTS_PAGE);
   const [searchOrigin, setSearchOrigin] = useState<{ lat: number; lng: number } | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
@@ -111,6 +114,7 @@ export default function CoursesTab({ currentMember, groupId, initialFavorites, o
       setSearchOrigin(coords);
       const courses = await fetchNearbyCourses(coords.lat, coords.lng);
       setResults(courses);
+      setVisibleCount(RESULTS_PAGE);
       setHasSearched(true);
     } catch (err) {
       setSearchError(friendlyError(err, "Course search failed. Please try again."));
@@ -205,7 +209,7 @@ export default function CoursesTab({ currentMember, groupId, initialFavorites, o
 
         {results.length > 0 && (
           <div className="flex flex-col gap-2 mt-4">
-            {results.map((course) => {
+            {results.slice(0, visibleCount).map((course) => {
               const key = courseKey(course);
               const isFav = favoriteKeys.has(key);
               const isPending = favPending.has(key);
@@ -216,7 +220,7 @@ export default function CoursesTab({ currentMember, groupId, initialFavorites, o
               return (
                 <div
                   key={key}
-                  className="bg-[#0f2018] border border-[#2d5040] rounded-xl px-4 py-3 flex items-center justify-between gap-3"
+                  className="bg-[#0f2018] border border-[#2d5040] rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3"
                 >
                   <div className="min-w-0">
                     <p className="text-white text-sm font-medium truncate">{course.name}</p>
@@ -229,7 +233,7 @@ export default function CoursesTab({ currentMember, groupId, initialFavorites, o
                         .join(" · ")}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 flex-none">
+                  <div className="flex items-center gap-2 flex-none [&>button]:flex-1 sm:[&>button]:flex-none">
                     {currentMember.is_admin && (
                       <button
                         onClick={() => onBookCourse(course.name)}
@@ -253,6 +257,18 @@ export default function CoursesTab({ currentMember, groupId, initialFavorites, o
                 </div>
               );
             })}
+            {results.length > visibleCount && (
+              <button
+                onClick={() => setVisibleCount((n) => n + RESULTS_PAGE)}
+                className="mt-1 border border-[#2d5040] text-white/60 text-sm font-medium py-3 rounded-lg hover:border-[#4d7a5d] hover:text-white/80 transition-colors"
+              >
+                Show {Math.min(RESULTS_PAGE, results.length - visibleCount)} more
+                <span className="text-[#4d7a5d]">
+                  {" "}
+                  ({results.length - visibleCount} left)
+                </span>
+              </button>
+            )}
           </div>
         )}
       </section>
@@ -276,7 +292,7 @@ export default function CoursesTab({ currentMember, groupId, initialFavorites, o
               return (
                 <div
                   key={key}
-                  className="bg-[#0f2018] border border-[#2d5040] rounded-xl px-4 py-3 flex items-center justify-between gap-3"
+                  className="bg-[#0f2018] border border-[#2d5040] rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3"
                 >
                   <div className="min-w-0">
                     <p className="text-white text-sm font-medium truncate">{course.name}</p>
@@ -284,7 +300,7 @@ export default function CoursesTab({ currentMember, groupId, initialFavorites, o
                       <p className="text-[#4d7a5d] text-xs mt-0.5">{course.address}</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 flex-none">
+                  <div className="flex items-center gap-2 flex-none [&>button]:flex-1 sm:[&>button]:flex-none">
                     {currentMember.is_admin && (
                       <button
                         onClick={() => onBookCourse(course.name)}

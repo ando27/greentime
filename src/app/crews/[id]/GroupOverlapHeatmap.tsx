@@ -98,7 +98,7 @@ export default function GroupOverlapHeatmap({ members, allAvailability }: Props)
         <button
           onClick={() => setWindowOffset((o) => Math.max(0, o - 14))}
           disabled={atStart}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-[#4d7a5d] hover:text-white/70 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="w-11 h-11 flex items-center justify-center rounded-lg text-[#4d7a5d] hover:text-white/70 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           aria-label="Previous two weeks"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -108,7 +108,7 @@ export default function GroupOverlapHeatmap({ members, allAvailability }: Props)
         <span className="text-white font-semibold text-sm">{rangeLabel}</span>
         <button
           onClick={() => setWindowOffset((o) => o + 14)}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-[#4d7a5d] hover:text-white/70 transition-colors"
+          className="w-11 h-11 flex items-center justify-center rounded-lg text-[#4d7a5d] hover:text-white/70 transition-colors"
           aria-label="Next two weeks"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -138,12 +138,12 @@ export default function GroupOverlapHeatmap({ members, allAvailability }: Props)
               onClick={() => handleDayClick(dateStr)}
               title={`${count} member${count !== 1 ? "s" : ""} free`}
               aria-pressed={isSelected}
-              className={`flex-none w-[60px] flex flex-col items-center gap-1.5 ${bgForCount(count)} border-2 rounded-xl py-3 px-1.5 transition-all active:scale-95 ${
+              className={`flex-none w-[84px] flex flex-col items-center gap-1.5 ${bgForCount(count)} border-2 rounded-xl py-3 px-1.5 transition-all active:scale-95 ${
                 isSelected ? "border-[#4ade80]" : "border-[#2d5040]/60"
               }`}
             >
               {/* Day name */}
-              <span className={`text-[9px] font-semibold uppercase tracking-wide ${labelTextForCount(count)}`}>
+              <span className={`text-[11px] font-semibold uppercase tracking-wide ${labelTextForCount(count)}`}>
                 {dayName}
               </span>
 
@@ -196,11 +196,11 @@ export default function GroupOverlapHeatmap({ members, allAvailability }: Props)
 
       {/* Legend */}
       <div className="flex items-center gap-3 justify-center flex-wrap">
-        <span className="text-[10px] text-[#4d7a5d]">Members free:</span>
+        <span className="text-[11px] text-[#4d7a5d]">Members free:</span>
         {([0, 1, 2, 3, "4+"] as const).map((label, i) => (
           <div key={i} className="flex items-center gap-1">
             <div className={`w-3 h-3 rounded ${bgForCount(i === 4 ? 4 : (label as number))} border border-[#2d5040]/40`} />
-            <span className="text-[10px] text-[#4d7a5d]">{label}</span>
+            <span className="text-[11px] text-[#4d7a5d]">{label}</span>
           </div>
         ))}
       </div>

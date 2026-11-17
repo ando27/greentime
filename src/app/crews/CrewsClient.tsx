@@ -58,7 +58,7 @@ function CrewCard({ crew }: { crew: Crew }) {
               {crew.name}
             </h3>
             {crew.isAdmin && (
-              <span className="shrink-0 text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#4ade80]/10 border border-[#4ade80]/25 text-[#4ade80]">
+              <span className="shrink-0 text-[11px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#4ade80]/10 border border-[#4ade80]/25 text-[#4ade80]">
                 Admin
               </span>
             )}
@@ -174,7 +174,7 @@ export default function CrewsClient({
             </span>
             <button
               onClick={() => setShowProfile(true)}
-              className="w-8 h-8 rounded-full bg-[#4ade80] flex items-center justify-center text-[#0f2018] font-bold text-sm hover:bg-[#6ee7a0] transition-colors shrink-0"
+              className="w-11 h-11 rounded-full bg-[#4ade80] flex items-center justify-center text-[#0f2018] font-bold text-sm hover:bg-[#6ee7a0] transition-colors shrink-0"
               aria-label="Edit profile"
             >
               {profileState.displayName.charAt(0).toUpperCase()}

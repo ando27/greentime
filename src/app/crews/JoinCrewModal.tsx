@@ -95,6 +95,8 @@ export default function JoinCrewModal({ onClose, onSuccess }: Props) {
                 setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))
               }
               placeholder="ABC123"
+              autoCapitalize="characters"
+              autoCorrect="off"
               maxLength={6}
               autoFocus
               autoComplete="off"

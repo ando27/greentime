@@ -130,6 +130,8 @@ Audited 2026-11-16 (P0-1). This repo root IS the Next.js app (there is no `green
 
 **Security model (P2):** every table has row level security. A user can only read and write rows in crews they belong to; only admins can rename/delete a crew or remove members. Because non-members cannot read `groups` or insert into `members`, crews are created and joined ONLY through database functions: `create_group`, `join_group_by_code`, `get_invite_preview` (called from `src/lib/crews.ts`). Never write `supabase.from("groups").insert(...)` or `.from("members").insert(...)` in app code: it will be rejected. When adding a feature that writes to a table, check the policy for that table in section 7 of `supabase/schema.sql` first.
 
+**Mobile rules (P3):** `src/app/globals.css` enforces, on phones and touch screens, a 44px minimum height for every button, link and form control, and 16px text in form fields (smaller makes iOS zoom the page). Minimum text size anywhere is 11px. Don't shrink these per component; if something must look small, make the whole row tappable. Long names must truncate (`truncate`, or `line-clamp-2 break-words` for titles). Check new screens at 375px and 320px wide.
+
 **Guests:** "Continue as guest" uses Supabase anonymous sign-in, so a guest has a real `auth.uid()` and goes through the same profile setup as everyone else. There are no `user_id = null` member rows created by this app.
 
 ---

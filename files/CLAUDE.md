@@ -115,6 +115,7 @@ Audited 2026-11-16 (P0-1). This repo root IS the Next.js app (there is no `green
 | Join / create crew logic | `src/lib/crews.ts` |
 | Invite link landing page (`/join/CODE`) | `src/app/join/[code]/` |
 | One crew (tabs: events, members, availability, courses) | `src/app/crews/[id]/` (`page.tsx` loads data, `CrewDetail.tsx` is the screen) |
+| Crew settings (rename, new code, leave, delete) and member management | `CrewSettings.tsx`, `MembersTab` in `CrewDetail.tsx`, `src/components/ConfirmDialog.tsx` |
 | Events, RSVP, bails | `EventCard.tsx`, `CreateEventModal.tsx`, `EditEventModal.tsx` |
 | Availability + heat map | `AvailabilityCalendar.tsx`, `GroupOverlapHeatmap.tsx` |
 | Course search, favorites, Meet in the Middle | `CoursesTab.tsx`, `MeetInTheMiddle.tsx`, `src/lib/geo.ts`, `src/lib/overpass.ts` |

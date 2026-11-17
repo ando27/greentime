@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
 import EventCard from "./EventCard";
 import MyCrewLocation from "./MyCrewLocation";
+import CrewSettings from "./CrewSettings";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import CreateEventModal from "./CreateEventModal";
 import EditEventModal from "./EditEventModal";
 import AvailabilityCalendar from "./AvailabilityCalendar";
@@ -308,6 +310,7 @@ export default function CrewDetail({
 
         {tab === "members" && (
           <MembersTab
+            group={group}
             members={initialMembers}
             currentMember={currentMember}
             inviteCode={group.invite_code}
@@ -546,17 +549,69 @@ function EventsTab({
 }
 
 function MembersTab({
+  group,
   members,
   currentMember,
   inviteCode,
   bailLog,
 }: {
+  group: DBGroup;
   members: DBMember[];
   currentMember: DBMember;
   inviteCode: string;
   bailLog: DBBailLog[];
 }) {
   const toast = useToast();
+  const router = useRouter();
+  const supabase = createClient();
+  const [removeTarget, setRemoveTarget] = useState<DBMember | null>(null);
+  const [memberBusy, setMemberBusy] = useState(false);
+
+  // Admin: make someone an admin, or take it away
+  async function handleToggleAdmin(member: DBMember) {
+    setMemberBusy(true);
+    const { data, error } = await supabase
+      .from("members")
+      .update({ is_admin: !member.is_admin })
+      .eq("id", member.id)
+      .select("id")
+      .maybeSingle();
+    setMemberBusy(false);
+
+    if (error) return toast.error(error, "Couldn't change that member.");
+    if (!data) return toast.error("Couldn't change that member. Only admins can do that.");
+    toast.success(
+      member.is_admin
+        ? `${member.name} is no longer an admin`
+        : `${member.name} is now an admin`
+    );
+    router.refresh();
+  }
+
+  // Admin: remove a member (their availability and RSVPs go with them)
+  async function handleRemoveMember() {
+    if (!removeTarget) return;
+    setMemberBusy(true);
+    const { data, error } = await supabase
+      .from("members")
+      .delete()
+      .eq("id", removeTarget.id)
+      .select("id");
+    setMemberBusy(false);
+
+    if (error || !data || data.length === 0) {
+      toast.error(
+        error ?? "Couldn't remove that member. Only admins can do that.",
+        "Couldn't remove that member."
+      );
+      setRemoveTarget(null);
+      return;
+    }
+    toast.success(`${removeTarget.name} removed from the crew`);
+    setRemoveTarget(null);
+    router.refresh();
+  }
+
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -656,18 +711,27 @@ function MembersTab({
         {members.map((m) => {
           const bails = bailCounts[m.id] ?? 0;
           const isExpanded = expandedId === m.id;
-          const hasDetail = !!m.home_label || bails > 0;
+          const isMe = m.id === currentMember.id;
+          // Admins can manage everyone except themselves (use Leave for that)
+          const canManage = currentMember.is_admin && !isMe;
+          const hasDetail = !!m.home_label || bails > 0 || canManage;
 
           return (
-            <button
+            <div
               key={m.id}
-              type="button"
-              onClick={() => setExpandedId(isExpanded ? null : m.id)}
-              className="w-full text-left bg-[#0f2018] border border-[#2d5040] rounded-xl px-4 py-3 hover:border-[#4d7a5d] active:scale-[0.99] transition-all"
+              className="bg-[#0f2018] border border-[#2d5040] rounded-xl hover:border-[#4d7a5d] transition-colors"
             >
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-white text-sm font-medium">{m.name}</span>
-                <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setExpandedId(isExpanded ? null : m.id)}
+                aria-expanded={isExpanded}
+                className="w-full text-left px-4 py-3.5 flex items-center justify-between gap-3"
+              >
+                <span className="text-white text-sm font-medium truncate">
+                  {m.name}
+                  {isMe && <span className="text-[#4d7a5d] font-normal"> (you)</span>}
+                </span>
+                <span className="flex items-center gap-2 shrink-0">
                   {m.is_admin && (
                     <span className="text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#4ade80]/10 border border-[#4ade80]/25 text-[#4ade80]">
                       Admin
@@ -690,11 +754,11 @@ function MembersTab({
                       />
                     </svg>
                   )}
-                </div>
-              </div>
+                </span>
+              </button>
 
               {isExpanded && hasDetail && (
-                <div className="mt-2 pt-2 border-t border-[#2d5040]/60 flex flex-col gap-1">
+                <div className="mx-4 pb-3 pt-2 border-t border-[#2d5040]/60 flex flex-col gap-1">
                   {m.home_label && (
                     <p className="text-[#4d7a5d] text-xs">📍 {m.home_label}</p>
                   )}
@@ -703,12 +767,45 @@ function MembersTab({
                       🚩 {bails} {bails === 1 ? "bail" : "bails"}
                     </p>
                   )}
+                  {canManage && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => handleToggleAdmin(m)}
+                        disabled={memberBusy}
+                        className="flex-1 text-xs font-semibold px-3 py-2.5 rounded-lg border border-[#2d5040] text-[#4d7a5d] hover:border-[#4d7a5d] hover:text-white/60 transition-colors disabled:opacity-50"
+                      >
+                        {m.is_admin ? "Remove admin" : "Make admin"}
+                      </button>
+                      <button
+                        onClick={() => setRemoveTarget(m)}
+                        disabled={memberBusy}
+                        className="flex-1 text-xs font-semibold px-3 py-2.5 rounded-lg border border-rose-500/40 text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-50"
+                      >
+                        Remove from crew
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
+
+      {/* Rename, new code, leave, delete */}
+      <CrewSettings group={group} currentMember={currentMember} members={members} />
+
+      {removeTarget && (
+        <ConfirmDialog
+          title={`Remove ${removeTarget.name}?`}
+          message="Their availability, RSVPs and bail history in this crew will be removed. They can rejoin with an invite."
+          confirmLabel="Remove"
+          busyLabel="Removing…"
+          busy={memberBusy}
+          onConfirm={handleRemoveMember}
+          onCancel={() => setRemoveTarget(null)}
+        />
+      )}
     </div>
   );
 }

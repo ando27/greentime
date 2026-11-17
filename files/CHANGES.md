@@ -29,9 +29,17 @@ Status: code and database scripts are done and tested. Step A is applied to the 
 - "Continue as guest" already used Supabase anonymous sign-in, so guests have a real identity and are covered by the same rules. It is "just enter your name": location has been optional since P0-5
 - New: a guest can save their account. A "Guest account" prompt on My Crews opens the profile, where adding an email and password turns the guest into a normal account with the same crews, availability and RSVPs
 
+### Crew settings and member management (new; were P4 quick wins and F-06)
+- Reported by Justin: "I'm the admin, but I don't have an option to rename or delete a crew." The rules allowed it, but the app had no buttons for it
+- New "Crew settings" card on the Members tab. Admins: rename the crew, replace the invite code (old code and links stop working), delete the crew. Everyone: leave the crew
+- A crew can't be left without an admin: the only admin is told to make someone else an admin first; the only member is told to delete the crew instead
+- Admins can open any other member's card to "Make admin" / "Remove admin" or "Remove from crew"
+- Every destructive action asks for confirmation (shared `ConfirmDialog`) and confirms the database really changed before saying so
+- New database function `regenerate_invite_code(group_id)`, admins only, applied to the live project (additive)
+
 ### Tested
 - Rules: 56 checks on a local Postgres copy with an admin, a member, an outsider and a signed-out visitor, run against both the migration scripts and `schema.sql`. Every "blocked" case was confirmed blocked for the intended reason. The undo script was run too
-- App: 19 checks in a real browser against the live database (still on the old open rules) with the new code: create crew, invite code, create event, join by code, wrong code, RSVP in/out, join twice, guest by invite link with just a name, guest saves account and signs in elsewhere with the email
+- App: 32 checks in a real browser against the live database (still on the old open rules) with the new code: create crew, invite code, create event, join by code, wrong code, RSVP in/out, join twice, guest by invite link with just a name, guest saves account and signs in elsewhere with the email, rename, make/remove admin, remove member, replace invite code (old link dies, new one works), sole admin can't leave, member sees no admin controls, member leaves, admin deletes crew. 28 passed outright; the other 4 were the test script misreading confirmation messages, and the database confirmed those actions worked. The script has been corrected for the cutover run
 - NOT yet tested: the app against the tightened rules on the live database. That can only happen at cutover, because the rules and the code have to go live together
 
 ### Cutover (needs Justin's go-ahead)

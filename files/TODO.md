@@ -46,8 +46,8 @@ Code is done and live on `main`. The existing Supabase project was kept and upgr
 Quick wins
 - ✅ F-04 · Book from Meet in the Middle (shipped as E-06 in June)
 - ⬜ Edit and delete events: admin-only today; extend to the event creator
-- ⬜ Leave a crew for signed-in users. Delete a crew and regenerate invite code for admins.
-- ⬜ F-06 · Remove a member (admin only, with confirm)
+- 🟨 Leave a crew; rename, delete, and replace invite code for admins — built on `p2-security`, goes live with the P2 merge
+- 🟨 F-06 · Remove a member, and make/remove admin (admin only, with confirm) — built on `p2-security`
 - ⬜ Realtime: Supabase Realtime subscriptions on rsvps, events, availability, bail_log
 
 Bail system

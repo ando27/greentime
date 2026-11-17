@@ -121,6 +121,14 @@ One entry per TODO item, each its own commit.
 - Shared query/parse code moved to `src/lib/overpass.ts`
 - Tested with simulated servers: main works; main down then mirror; both down then our server; everything down gives the readable error; a hung server is abandoned after 10s; failures aren't cached. NOT tested against the real Overpass servers (unreachable from the build sandbox), so this needs one more course search on the preview
 
+### P1-4 follow-up 2: the real cause, from Justin's browser console
+- Console output showed `overpass-api.de` answering **406** both in the browser and from Vercel, the old mirror `overpass.kumi.systems` timing out, and `maps.mail.ru` answering 504
+- 406 is overpass-api.de's deliberate "you are blocked" answer. Since April 2026 it turns away cloud hosts and hosted-app domains (see Overpass-API issue #791 and the OSM wiki usage policy). `overpass.kumi.systems` has been renamed `overpass.private.coffee`. So the earlier guess ("missing User-Agent") was wrong: a good User-Agent does not get a Vercel-hosted app unblocked
+- Fix: stopped using overpass-api.de entirely. Server order for North America is now `ovp.dresel.systems/api-na` (free, no key, allows browser requests, asks only for an identifying User-Agent/Referer), then `overpass.private.coffee`. Elsewhere: private.coffee, then the Dresel Europe server
+- New last resort: if every Overpass server fails, courses come from Nominatim instead (`/api/nominatim?golf=1`). It returns at most 40 courses, so it is a safety net, not the main path
+- Full order: two Overpass servers from the browser → `/api/overpass` from Vercel → Nominatim. One at a time, never in parallel
+- Verified against the live services this time: `/api/overpass` returned 197 courses for a 30-mile Chicago search in 4.6s; a real browser page fetched the Dresel server cross-origin successfully; the Nominatim fallback returned 32 courses; ordinary location search still works. Not yet confirmed from the Vercel preview itself
+
 ### Not verified end to end
 - No Supabase project was available during this work (the new one isn't set up yet), so sign-in, profile, crew, RSVP and location flows were checked by type-check, lint, production build and reading the code, not by clicking through. Run the checklist in `files/TODO.md` after the Supabase setup
 - P1-5 (invite link) not started; notes are in `files/TODO.md`

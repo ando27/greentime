@@ -2,18 +2,17 @@ import { NextResponse, type NextRequest } from "next/server";
 import { osmHeaders } from "@/lib/osm";
 import {
   MAX_RADIUS_M,
-  OVERPASS_SERVERS,
+  overpassServersFor,
   golfCourseQueryBody,
   parseOverpassCourses,
 } from "@/lib/overpass";
 
 // Golf course search through our own server. This is the BACKUP path: the
-// browser asks the Overpass servers directly first (src/lib/geo.ts), because
-// the public Overpass servers often refuse requests from cloud hosts such as
-// Vercel. This route is used when the direct path fails (for example on a
-// network that blocks those servers).
+// browser asks the Overpass servers directly first (src/lib/geo.ts). This
+// route covers networks where the browser can't reach them. If this fails
+// too, the browser falls back to /api/nominatim?golf=1.
 
-const ATTEMPT_TIMEOUT_MS = 8_000;
+const ATTEMPT_TIMEOUT_MS = 7_000;
 
 // Allow the function enough time for all attempts (Vercel setting)
 export const maxDuration = 60;
@@ -37,7 +36,8 @@ export async function GET(request: NextRequest) {
   const body = golfCourseQueryBody(lat, lng, radius);
   const problems: string[] = [];
 
-  for (const server of OVERPASS_SERVERS) {
+  // Two servers at most, one after the other (never in parallel)
+  for (const server of overpassServersFor(lng).slice(0, 2)) {
     const host = new URL(server).host;
     try {
       const res = await fetch(server, {

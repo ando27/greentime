@@ -329,7 +329,10 @@ Members tab shows name, admin badge, home location, and bail count. Cards are bu
 "Continue as guest" on /login fails with "Anonymous sign-ins are disabled" — anonymous auth is switched off in the Supabase project settings. Either re-enable it in Supabase (Auth → Providers → Anonymous) or remove the button.
 
 **Overpass / course search (updated 2026-11-17):**
-Course search asks the public Overpass servers straight from the browser first (overpass-api.de, then overpass.kumi.systems, 10s timeout each), then falls back to our own route `src/app/api/overpass/route.ts`, which retries all servers from Vercel. Browser-first matters: on the first real deployment, every request made from Vercel failed (public Overpass servers appear to refuse cloud hosts). Shared code is in `src/lib/overpass.ts`; the client logic is `fetchGolfCourses` in `src/lib/geo.ts`. Results are cached per rounded lat/lng + radius for the session.
+- Do NOT use `overpass-api.de`. It answers 406 ("you are blocked") to this app both from the browser and from Vercel; since April 2026 it turns away cloud hosts and hosted-app domains, and a good User-Agent does not fix that. `overpass.kumi.systems` is now `overpass.private.coffee`.
+- Servers in use are chosen in `overpassServersFor()` in `src/lib/overpass.ts`: North America → `ovp.dresel.systems/api-na` then `overpass.private.coffee`; elsewhere → private.coffee then Dresel Europe.
+- Order of attempts (`fetchGolfCourses` in `src/lib/geo.ts`), one at a time: two Overpass servers straight from the browser → our `/api/overpass` route → `/api/nominatim?golf=1` (Nominatim, max 40 courses, last resort).
+- These are free community servers. Keep usage light: results are cached per rounded lat/lng + radius; never query in parallel or in loops. If the app ever gets real traffic, move to a keyed/paid Overpass service (list on the OSM wiki Overpass API page).
 
 **Member cards bail count bug (fixed):**
 The original implementation fetched `bail_log` by `group_id` on the client, which returned empty rows due to RLS (policy only permits reads filtered by `event_id`). Fixed by passing the already-loaded `bailLog` state from `CrewDetail` directly to `MembersTab` and computing counts from it — no extra query needed.

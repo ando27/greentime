@@ -2,7 +2,7 @@
 // shared by every screen.
 
 import {
-  OVERPASS_SERVERS,
+  overpassServersFor,
   golfCourseQueryBody,
   parseOverpassCourses,
   type Course,
@@ -84,7 +84,7 @@ export async function searchPlaces(
 export type { Course } from "./overpass";
 
 // How long to wait for each Overpass server when asking from the browser
-const DIRECT_TIMEOUT_MS = 10_000;
+const DIRECT_TIMEOUT_MS = 8_000;
 // Ask at most this many servers directly before using our own server route
 const DIRECT_ATTEMPTS = 2;
 
@@ -110,20 +110,18 @@ async function fetchDirect(server: string, body: string): Promise<Course[]> {
   }
 }
 
-/** Asks through our own server route (the backup path). */
-async function fetchViaServer(
-  lat: number,
-  lng: number,
-  radius: number
-): Promise<Course[]> {
-  const res = await fetch(`/api/overpass?lat=${lat}&lng=${lng}&radius=${radius}`);
-  const body = (await res.json().catch(() => null)) as {
-    courses?: Course[];
-    error?: string;
-    detail?: string[];
-  } | null;
+interface CourseAnswer {
+  courses?: Course[];
+  error?: string;
+  detail?: string[];
+}
+
+/** Asks one of our own server routes for courses. */
+async function fetchFromOurServer(url: string, label: string): Promise<Course[]> {
+  const res = await fetch(url);
+  const body = (await res.json().catch(() => null)) as CourseAnswer | null;
   if (!res.ok || !body?.courses) {
-    if (body?.detail) console.warn("Course search (server route):", body.detail);
+    if (body?.detail) console.warn(`Course search (${label}):`, body.detail);
     throw new Error(body?.error ?? "Course search failed. Please try again.");
   }
   return body.courses;
@@ -132,12 +130,12 @@ async function fetchViaServer(
 /**
  * Finds golf courses within radiusMeters of a point.
  *
- * Order of attempts, each with a timeout:
- *   1. the main Overpass server, straight from the browser
- *   2. a mirror, straight from the browser
- *   3. our own server route, which tries every server again from Vercel
- * The browser goes first because the public Overpass servers often refuse
- * requests from cloud hosts. Throws with a readable message if all fail.
+ * Order of attempts, one at a time, each with a timeout:
+ *   1-2. two Overpass servers, straight from the browser
+ *   3.   our /api/overpass route (asks Overpass from Vercel instead)
+ *   4.   our /api/nominatim?golf=1 route (a different data service; returns
+ *        at most 40 courses, so it is only the last resort)
+ * Throws with a readable message only if all four fail.
  */
 export function fetchGolfCourses(
   lat: number,
@@ -156,8 +154,9 @@ export function fetchGolfCourses(
 
   const request = (async () => {
     const body = golfCourseQueryBody(rLat, rLng, radius);
+    const area = `lat=${rLat}&lng=${rLng}&radius=${radius}`;
 
-    for (const server of OVERPASS_SERVERS.slice(0, DIRECT_ATTEMPTS)) {
+    for (const server of overpassServersFor(rLng).slice(0, DIRECT_ATTEMPTS)) {
       try {
         return await fetchDirect(server, body);
       } catch (err) {
@@ -165,7 +164,13 @@ export function fetchGolfCourses(
       }
     }
 
-    return fetchViaServer(rLat, rLng, radius);
+    try {
+      return await fetchFromOurServer(`/api/overpass?${area}`, "server route");
+    } catch (err) {
+      console.warn("Course search: server route failed, trying map search.", err);
+    }
+
+    return fetchFromOurServer(`/api/nominatim?golf=1&${area}`, "map search");
   })();
 
   courseCache.set(key, request);

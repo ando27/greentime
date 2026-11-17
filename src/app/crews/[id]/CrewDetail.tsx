@@ -558,6 +558,7 @@ function MembersTab({
 }) {
   const toast = useToast();
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Count bails per member from the already-loaded bail log
@@ -576,28 +577,75 @@ function MembersTab({
       .catch(() => toast.error(`Couldn't copy. The code is ${inviteCode}`));
   }
 
+  // The share link always uses the address the app is being viewed at
+  // (window.location.origin), so it is a real https:// link to this site,
+  // never a file path or "null".
+  function inviteLink(): string {
+    return `${window.location.origin}/join/${inviteCode}`;
+  }
+
+  async function handleShareLink() {
+    const link = inviteLink();
+
+    // Phones: open the share sheet (Messages, WhatsApp, ...)
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: "Join my GreenTime crew",
+          text: "Join my crew on GreenTime:",
+          url: link,
+        });
+        return;
+      } catch (err) {
+        // User closed the share sheet: nothing to do
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        // Otherwise fall through to copying
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(link);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+      toast.success("Invite link copied");
+    } catch {
+      toast.error(`Couldn't copy. The link is ${link}`);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-5">
-      {/* Invite code */}
-      <div className="bg-[#0f2018] border border-[#2d5040] rounded-xl p-4 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs text-[#4d7a5d] font-medium uppercase tracking-wider mb-0.5">
-            Invite code
-          </p>
-          <p className="text-white font-mono text-lg tracking-widest font-semibold">
-            {inviteCode}
-          </p>
+      {/* Invite: share link + code */}
+      <div className="bg-[#0f2018] border border-[#2d5040] rounded-xl p-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs text-[#4d7a5d] font-medium uppercase tracking-wider mb-0.5">
+              Invite code
+            </p>
+            <p className="text-white font-mono text-lg tracking-widest font-semibold">
+              {inviteCode}
+            </p>
+          </div>
+          <button
+            onClick={handleCopy}
+            className={`text-xs font-semibold px-3.5 py-2.5 rounded-lg border transition-all ${
+              copied
+                ? "border-[#4ade80] text-[#4ade80] bg-[#4ade80]/10"
+                : "border-[#2d5040] text-[#4d7a5d] hover:border-[#4d7a5d] hover:text-white/60"
+            }`}
+          >
+            {copied ? "Copied!" : "Copy code"}
+          </button>
         </div>
         <button
-          onClick={handleCopy}
-          className={`text-xs font-semibold px-3 py-2 rounded-lg border transition-all ${
-            copied
-              ? "border-[#4ade80] text-[#4ade80] bg-[#4ade80]/10"
-              : "border-[#2d5040] text-[#4d7a5d] hover:border-[#4d7a5d] hover:text-white/60"
-          }`}
+          onClick={handleShareLink}
+          className="w-full bg-[#4ade80] text-[#0f2018] font-semibold text-sm py-3 rounded-lg hover:bg-[#6ee7a0] active:scale-[0.98] transition-all"
         >
-          {copied ? "Copied!" : "Copy"}
+          {linkCopied ? "Link copied!" : "Share invite link"}
         </button>
+        <p className="text-xs text-[#4d7a5d]">
+          Anyone with the link can join after signing in.
+        </p>
       </div>
 
       {/* Your own location for this crew */}

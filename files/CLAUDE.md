@@ -1,5 +1,5 @@
 # GreenTime — Project Handoff & Context Document
-Last updated: 2026-11-16
+Last updated: 2026-11-17
 
 This document exists so any new Claude conversation can pick up exactly where we left off without losing context. Read this before doing anything.
 
@@ -113,6 +113,7 @@ Audited 2026-11-16 (P0-1). This repo root IS the Next.js app (there is no `green
 | Profile read/save helpers | `src/lib/profile.ts` |
 | Crew list, create, join, edit profile | `src/app/crews/` (`page.tsx` loads on the server, `CrewsClient.tsx` renders and refreshes) |
 | Join / create crew logic | `src/lib/crews.ts` |
+| Invite link landing page (`/join/CODE`) | `src/app/join/[code]/` |
 | One crew (tabs: events, members, availability, courses) | `src/app/crews/[id]/` (`page.tsx` loads data, `CrewDetail.tsx` is the screen) |
 | Events, RSVP, bails | `EventCard.tsx`, `CreateEventModal.tsx`, `EditEventModal.tsx` |
 | Availability + heat map | `AvailabilityCalendar.tsx`, `GroupOverlapHeatmap.tsx` |

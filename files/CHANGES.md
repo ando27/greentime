@@ -20,7 +20,14 @@ Tested for real this time: the app ran against the live Supabase project in a br
 - Tested against the live project: short and mismatched passwords rejected; new password saved; old password stops working; new password signs in; request accepted by Supabase
 - NOT tested: the email itself and clicking its link (no way to receive mail in the test environment). Until an email sender is connected in Supabase, reset emails only reach Supabase team addresses. Like magic links, the default link only works in the browser that requested it
 
-<!--INVITE-->
+### P1-5: Invite link URL
+- Finding: the app had no share link at all, only the 6-character code. So this item was built rather than fixed
+- Members tab: new "Share invite link" button. The link is built from `window.location.origin`, so it is always the real `https://` address of the site being viewed, never a file path or `null`. On phones it opens the share sheet; elsewhere it copies the link
+- New page `/join/CODE`: shows the crew name and a "Join crew" button. Joining happens on the button press, not just by opening the link, so link previews can't add anyone
+- Signed-out visitors are sent to sign-in (or create account, or guest) and brought back to the invite afterwards, including through first-time profile setup
+- Already a member → goes straight into the crew. Unknown or malformed code → a clear message
+- Uses the same `joinCrewByCode` as the join dialog, so the duplicate-member guard applies
+- Tested against the live project with two accounts: link copied correctly; signed-out visitor → sign in → back on the invite → join → in the crew; second visit goes straight in; bad codes handled; exactly one member row created
 
 ---
 

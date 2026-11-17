@@ -1,13 +1,13 @@
 # GreenTime: TODO
 
-Last updated: 2026-11-16
+Last updated: 2026-11-17
 Read `files/CLAUDE.md` first. Work top to bottom. Each numbered item should be its own commit with an entry in `files/CHANGES.md`.
 
 Status key: ⬜ open · 🟨 in progress · ✅ done
 
 ## P0: Fix sign-in, profiles, and groups
 
-Code is done and on branch `p0-p1-fixes`. The existing Supabase project was kept and upgraded in place on Nov 17 (data preserved, keys unchanged). Still needed from Justin: steps 3 to 5 in `files/SUPABASE_SETUP.md` (URLs and sign-in settings), then run the testing checklist below.
+Code is done and live on `main`. The existing Supabase project was kept and upgraded in place on Nov 17 (data preserved, keys unchanged). Still needed from Justin: steps 3 to 5 in `files/SUPABASE_SETUP.md` (URLs and sign-in settings), then run the testing checklist below.
 
 - ✅ P0-1 · Audit the repo (Repo map in `files/CLAUDE.md`)
 - ✅ P0-2 · Consolidated schema file (`supabase/schema.sql`) — applied to the live project via `supabase/migrations/20261117_upgrade_existing_project.sql`
@@ -25,7 +25,8 @@ Code is done and on branch `p0-p1-fixes`. The existing Supabase project was kept
 - ✅ P1-2 · Bail window timezone check
 - ✅ P1-3 · Nominatim usage rules
 - ✅ P1-4 · Overpass reliability — code done; confirm course search works on the deployed site (could not reach Overpass from the build sandbox)
-- ⬜ P1-5 · Invite link URL. Note: the app currently shares only the 6-character code (Members tab → Copy). There is no share link yet, so this item means adding one: a "Copy invite link" button using `window.location.origin`, plus a `/join/CODE` page. Groundwork already in place: the proxy protects `/join` and remembers it through sign-in (`next` param), and `joinCrewByCode` in `src/lib/crews.ts` is ready to reuse.
+- ✅ P1-5 · Invite link URL — "Share invite link" on the Members tab plus a `/join/CODE` page
+- ✅ Forgot password (added Nov 17, wasn't on the original list) — email delivery untested until an email sender is connected
 
 ## P2: Security (before inviting real users)
 
@@ -78,7 +79,7 @@ Design and branding
 - [ ] Sign in on phone with the same email; profile and crews appear
 - [ ] First-time sign-in shows the name setup screen once, never again
 - [ ] Set home location from profile; it shows in every crew and in Meet in the Middle
-- [ ] Create a crew, share the invite code, join from another account
+- [ ] Create a crew, share the invite link, join from another account
 - [ ] Join a crew you're already in; no duplicate member row
 - [ ] Guest joins by code (needs Anonymous sign-ins enabled in Supabase)
 - [ ] Mark availability after 7pm; dates are correct (no off-by-one)

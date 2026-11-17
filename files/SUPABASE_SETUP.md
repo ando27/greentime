@@ -2,6 +2,8 @@
 
 Follow these in order. About 10 minutes.
 
+> **Status (Nov 17, 2026):** the existing project `fhflxafuvnvafkhwniiz` was kept and upgraded in place with `supabase/migrations/20261117_upgrade_existing_project.sql`. Steps 1 and 2 below are therefore already done (the URL and key did not change). Steps 3 to 5 still need doing by hand in the Supabase dashboard. Steps 1 and 2 only apply if a brand-new project is ever created.
+
 ## 1. Build the database (P0-2)
 
 1. Open your new project at supabase.com.

@@ -7,11 +7,11 @@ Status key: ⬜ open · 🟨 in progress · ✅ done
 
 ## P0: Fix sign-in, profiles, and groups
 
-Code is done and on branch `p0-p1-fixes`. Still needed from Justin: run `supabase/schema.sql`, set the new keys and URLs (`files/SUPABASE_SETUP.md`), then run the testing checklist below.
+Code is done and on branch `p0-p1-fixes`. The existing Supabase project was kept and upgraded in place on Nov 17 (data preserved, keys unchanged). Still needed from Justin: steps 3 to 5 in `files/SUPABASE_SETUP.md` (URLs and sign-in settings), then run the testing checklist below.
 
 - ✅ P0-1 · Audit the repo (Repo map in `files/CLAUDE.md`)
-- ✅ P0-2 · Consolidated schema file (`supabase/schema.sql`) — Justin still has to run it
-- ✅ P0-3 · New Supabase keys and URLs (`files/SUPABASE_SETUP.md`) — Justin still has to do the dashboard steps
+- ✅ P0-2 · Consolidated schema file (`supabase/schema.sql`) — applied to the live project via `supabase/migrations/20261117_upgrade_existing_project.sql`
+- ✅ P0-3 · Supabase keys and URLs (`files/SUPABASE_SETUP.md`) — keys unchanged (project reused); Justin still has to check Site URL / Redirect URLs in the dashboard
 - ✅ P0-4 · Fix the auth state handling
 - ✅ P0-5 · Profile lookup and first-run setup
 - ✅ P0-6 · Crew list loading

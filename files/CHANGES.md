@@ -100,6 +100,14 @@ One entry per TODO item, each its own commit.
 - Course search and Meet in the Middle share one fetch-and-parse function (`fetchGolfCourses` in `src/lib/geo.ts`) instead of two copies
 - NOT verified against live Overpass: the build sandbox couldn't reach any Overpass server. Verified here: bad input is rejected, and when every server fails the route falls through all three and returns a clean error in about 16s. Test course search on the deployed site
 
+### Database upgraded in place (Nov 17)
+- Decision: reuse the existing Supabase project (`fhflxafuvnvafkhwniiz`) instead of creating a new one. It still held real data (7 crews, 10 members, 6 profiles, 8 accounts), so nothing was dropped
+- Applied `supabase/migrations/20261117_upgrade_existing_project.sql` through the Supabase connector. It brings the live database in line with `supabase/schema.sql`. Row counts were identical before and after
+- What the old database was missing, which explains several "silent" failures: no delete policy on `members`, `bail_log` or `groups` (so bail reversal never actually removed the bail); no update policy on `availability` or `bail_log`; no unique constraint on `members (group_id, user_id)` or `bail_log (event_id, member_id)`; policies were open to signed-out visitors
+- Now: 4 explicit policies per table for signed-in users only, both unique constraints, required columns marked required, indexes added, `upsert_user_profile` returns the saved row
+- Because the project is reused, the URL and key in Vercel do not change
+- Supabase security check afterwards: warnings only. One worth doing by hand: turn on leaked password protection (Authentication settings)
+
 ### Not verified end to end
 - No Supabase project was available during this work (the new one isn't set up yet), so sign-in, profile, crew, RSVP and location flows were checked by type-check, lint, production build and reading the code, not by clicking through. Run the checklist in `files/TODO.md` after the Supabase setup
 - P1-5 (invite link) not started; notes are in `files/TODO.md`

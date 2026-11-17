@@ -28,11 +28,13 @@ Code is done and live on `main`. The existing Supabase project was kept and upgr
 - ✅ P1-5 · Invite link URL — "Share invite link" on the Members tab plus a `/join/CODE` page
 - ✅ Forgot password (added Nov 17, wasn't on the original list) — email delivery untested until an email sender is connected
 
-## P2: Security (before inviting real users)
+## P2: Security (done Nov 17)
 
-- 🟨 P2-1 · Guests — done in code: guests use anonymous sign-in, need only a name, and can save their account with an email later. Goes live with the P2 merge
-- 🟨 P2-2 · Tighten RLS — script written and tested locally (`supabase/migrations/20261117_p2b_tighten_rls.sql`); NOT applied to the live database yet. Apply right after the P2 code is merged
-- 🟨 P2-3 · Join-by-code RPC — functions applied to the live database; app code on branch `p2-security`
+- ✅ P2-1 · Guests — anonymous sign-in, name only, and can save the account with an email later
+- ✅ P2-2 · Tighten RLS — applied to the live database; verified with 32 browser checks and 11 direct bypass attempts
+- ✅ P2-3 · Join-by-code RPC — plus `create_group`, `get_invite_preview`, `regenerate_invite_code`
+- ⬜ Follow-up: a member can remove their own bail by talking to the database directly (the app only offers it inside the cutoff window). Close with a small database function
+- ⬜ Follow-up (Justin, by hand): turn on leaked password protection in Supabase Authentication settings
 
 ## P3: Mobile pass
 
@@ -46,8 +48,8 @@ Code is done and live on `main`. The existing Supabase project was kept and upgr
 Quick wins
 - ✅ F-04 · Book from Meet in the Middle (shipped as E-06 in June)
 - ⬜ Edit and delete events: admin-only today; extend to the event creator
-- 🟨 Leave a crew; rename, delete, and replace invite code for admins — built on `p2-security`, goes live with the P2 merge
-- 🟨 F-06 · Remove a member, and make/remove admin (admin only, with confirm) — built on `p2-security`
+- ✅ Leave a crew; rename, delete, and replace invite code for admins
+- ✅ F-06 · Remove a member, and make/remove admin (admin only, with confirm)
 - ⬜ Realtime: Supabase Realtime subscriptions on rsvps, events, availability, bail_log
 
 Bail system

@@ -5,14 +5,14 @@ Last updated: 2026-11-16
 
 ## Tue Nov 17, 2026 — P2: Security
 
-Status: code and database scripts are done and tested. Step A is applied to the live database. Step B (the actual lock-down) is NOT applied yet: it has to go live together with this code. See "Cutover" below.
+Status: DONE and live. Code merged to `main` (commit `950e03d`) and the lock-down applied to the live database on Nov 17. See "Cutover" below for how it went.
 
 ### P2-3: Join-by-code RPC (plus create and preview)
 - New database functions, applied to the live project (additive, changes no permissions): `join_group_by_code(code, display_name)`, `create_group(name)`, `get_invite_preview(code)`, and the helpers the policies use (`is_group_member`, `is_group_admin`, `owns_member`, `owns_member_in`, `shares_group_with`)
 - The app now creates crews, joins by code, and shows invite pages only through these functions (`src/lib/crews.ts`). They are what let a non-member join once non-members can no longer read the tables
 - Invite codes are now generated in the database, from letters and digits that can't be mistaken for each other (no I, O, 0, 1)
 
-### P2-2: Tighten RLS (script ready, not yet applied)
+### P2-2: Tighten RLS
 - `supabase/migrations/20261117_p2b_tighten_rls.sql`. After it runs:
   - You can only see and change data in crews you belong to
   - You can only change your own member row, availability, RSVPs and bails
@@ -40,12 +40,15 @@ Status: code and database scripts are done and tested. Step A is applied to the 
 ### Tested
 - Rules: 56 checks on a local Postgres copy with an admin, a member, an outsider and a signed-out visitor, run against both the migration scripts and `schema.sql`. Every "blocked" case was confirmed blocked for the intended reason. The undo script was run too
 - App: 32 checks in a real browser against the live database (still on the old open rules) with the new code: create crew, invite code, create event, join by code, wrong code, RSVP in/out, join twice, guest by invite link with just a name, guest saves account and signs in elsewhere with the email, rename, make/remove admin, remove member, replace invite code (old link dies, new one works), sole admin can't leave, member sees no admin controls, member leaves, admin deletes crew. 28 passed outright; the other 4 were the test script misreading confirmation messages, and the database confirmed those actions worked. The script has been corrected for the cutover run
-- NOT yet tested: the app against the tightened rules on the live database. That can only happen at cutover, because the rules and the code have to go live together
 
-### Cutover (needs Justin's go-ahead)
-1. Merge `p2-security` to `main` (the new code works with the old rules too, so nothing breaks at this point)
-2. Apply `20261117_p2b_tighten_rls.sql` to the live database
-3. Re-run the browser checks against the live site's database straight away; if anything fails, run the undo script
+### Cutover (done Nov 17)
+1. Merged `p2-security` to `main`; Vercel production deployment succeeded
+2. Applied `20261117_p2b_tighten_rls.sql` to the live database. The first attempt timed out waiting on Supabase's confirmation prompt and changed nothing; the second was approved by Justin and applied
+3. Re-ran the browser checks against the locked-down live database straight away: 32 of 32 passed, 0 page errors
+4. Then tried to get around the rules by talking to the database directly as a regular member: 11 of 11 attempts blocked (can't see other crews, members or profiles; can't rename or delete a crew; can't create a crew by writing to the table; can't make themselves admin; can't remove the admin; signed-out visitors get nothing)
+5. Supabase security check afterwards: warnings only, all expected by design (guests are anonymous sign-ins; the create/join functions are meant to be callable by signed-in users). One worth doing by hand: turn on leaked password protection in Authentication settings
+6. Test data removed: the "ZZ P2 Test" crews and throwaway guest accounts. Kept on purpose for future testing: "ZZ Claude Test Crew" and the two "ZZTest (Claude)" accounts
+- The undo script was not needed
 
 ---
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -14,6 +14,8 @@ const LINK_ERRORS: Record<string, string> = {
   auth_failed:
     "That sign-in link didn't work. Open it in the same browser you requested it from, or request a new one.",
   missing_code: "That sign-in link was incomplete. Request a new one.",
+  dev_login_failed:
+    "Test login failed. Check DEV_LOGIN_EMAIL and DEV_LOGIN_PASSWORD match a real account.",
 };
 
 type View = "password" | "magic";
@@ -105,6 +107,22 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(linkError);
   const [magicSent, setMagicSent] = useState(false);
+
+  // One-tap test login. Only offered when the server says it is switched on
+  // (never on the live site). See src/app/api/dev-login/route.ts.
+  const [devLogin, setDevLogin] = useState(false);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/dev-login")
+      .then((res) => res.json())
+      .then((data: { enabled?: boolean }) => {
+        if (active) setDevLogin(data.enabled === true);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function checkProfileAndRedirect(userId: string) {
     const { data: profile, error: profileError } = await supabase
@@ -335,6 +353,17 @@ function LoginForm() {
             </>
           )}
         </div>
+
+        {devLogin && (
+          <form action="/api/dev-login" method="post" className="mt-4">
+            <button
+              type="submit"
+              className="w-full border border-dashed border-amber-400/60 text-amber-300 text-sm font-medium py-3 rounded-lg hover:bg-amber-400/10 transition-colors"
+            >
+              Test login (dev only)
+            </button>
+          </form>
+        )}
 
         <div className="mt-6 flex justify-center">
           <button

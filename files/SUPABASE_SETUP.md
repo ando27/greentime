@@ -67,6 +67,21 @@ By default a magic link only works in the same browser that requested it (ask on
 
 Do the same in the **Confirm signup** template. The app already supports both link styles.
 
-## 6. Check it worked
+## 6. Optional: one-tap test login
+
+Skips typing your email and password while testing. Never active on the live site.
+
+1. Make sure your account has a password (My Crews → your initial, top right → "Set a password").
+2. On your computer, add to `.env.local`:
+   ```
+   DEV_LOGIN_EMAIL=you@example.com
+   DEV_LOGIN_PASSWORD=your-password
+   ```
+3. For Vercel previews: Settings → Environment Variables → add both, and tick **Preview** only (not Production). Redeploy the preview.
+4. The sign-in page now shows a dashed "Test login (dev only)" button.
+
+To turn it off, delete the two variables.
+
+## 7. Check it worked
 
 Run the testing checklist at the bottom of `files/TODO.md`.

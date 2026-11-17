@@ -107,6 +107,7 @@ Audited 2026-11-16 (P0-1). This repo root IS the Next.js app (there is no `green
 |---|---|
 | Sign in (password, magic link, guest) | `src/app/login/page.tsx` |
 | Create account | `src/app/signup/page.tsx` |
+| Test login button (dev only, off in production) | `src/app/api/dev-login/route.ts` |
 | First-run profile setup | `src/app/setup/page.tsx` |
 | Profile read/save helpers | `src/lib/profile.ts` |
 | Crew list, create, join, edit profile | `src/app/crews/` (`page.tsx` loads on the server, `CrewsClient.tsx` renders and refreshes) |

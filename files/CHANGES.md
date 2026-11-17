@@ -108,6 +108,12 @@ One entry per TODO item, each its own commit.
 - Because the project is reused, the URL and key in Vercel do not change
 - Supabase security check afterwards: warnings only. One worth doing by hand: turn on leaked password protection (Authentication settings)
 
+### Test login (dev only)
+- New "Test login (dev only)" button on the sign-in page: one tap signs in as the account named in `DEV_LOGIN_EMAIL` / `DEV_LOGIN_PASSWORD` (`src/app/api/dev-login/route.ts`)
+- It is a shortcut for typing that account's email and password, not a bypass: the account has normal permissions
+- Always off on the live site (Vercel production), even if the variables are set there. Off unless both variables are set. The password stays on the server and is never sent to the browser
+- Verified the switch: on with variables set, 404 in production, 404 with variables unset, and a wrong password shows an error on the sign-in page. The successful sign-in itself was not tested (no real credentials available here)
+
 ### Not verified end to end
 - No Supabase project was available during this work (the new one isn't set up yet), so sign-in, profile, crew, RSVP and location flows were checked by type-check, lint, production build and reading the code, not by clicking through. Run the checklist in `files/TODO.md` after the Supabase setup
 - P1-5 (invite link) not started; notes are in `files/TODO.md`

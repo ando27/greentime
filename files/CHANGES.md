@@ -3,6 +3,21 @@ Last updated: 2026-11-16
 
 ---
 
+## Tue Nov 17, 2026 — Console error check, forgot password, invite link (P1-5)
+
+Tested for real this time: the app ran against the live Supabase project in a browser, signed in as the two "ZZTest (Claude)" accounts (their passwords were reset to a random value for this; no real account was touched).
+
+### Sign-in library console error ("Navigator LockManager lock ... immediately failed")
+- Seen once in Justin's Firefox console on a Vercel preview. Could NOT be reproduced in Chrome, in dev or production builds, through sign-in, tab switches, hide/show of the tab, and reloads (0 page errors)
+- It comes from the Supabase library's background "is my session about to expire?" check finding the session busy and skipping that round. The library is written to ignore that case; sign-in and staying signed in were unaffected in every test
+- Action taken: updated `@supabase/supabase-js` from 2.105 to 2.119 (latest, same major version) and re-ran the full test. Not confirmed fixed in Firefox, since Firefox isn't available in the test environment. Treat as console noise unless someone is actually signed out unexpectedly
+
+<!--FORGOT-->
+
+<!--INVITE-->
+
+---
+
 ## Mon Nov 16, 2026 — P0 (sign-in, profiles, groups) + P1 (bugs)
 
 One entry per TODO item, each its own commit.

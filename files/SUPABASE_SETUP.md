@@ -67,6 +67,12 @@ By default a magic link only works in the same browser that requested it (ask on
 
 Do the same in the **Confirm signup** template. The app already supports both link styles.
 
+For password reset emails (**Reset Password** template), the any-device version is:
+
+```
+{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password
+```
+
 ## 6. Optional: one-tap test login
 
 Skips typing your email and password while testing. Never active on the live site.

@@ -12,7 +12,13 @@ Tested for real this time: the app ran against the live Supabase project in a br
 - It comes from the Supabase library's background "is my session about to expire?" check finding the session busy and skipping that round. The library is written to ignore that case; sign-in and staying signed in were unaffected in every test
 - Action taken: updated `@supabase/supabase-js` from 2.105 to 2.119 (latest, same major version) and re-ran the full test. Not confirmed fixed in Firefox, since Firefox isn't available in the test environment. Treat as console noise unless someone is actually signed out unexpectedly
 
-<!--FORGOT-->
+### Forgot password (new)
+- "Forgot password?" link on the sign-in page → `/forgot-password` (enter email, get a reset link) → the link signs you in through `/auth/callback` and lands on `/reset-password` (choose a new password)
+- The "check your email" message is the same whether or not the account exists, so the form can't be used to discover who has an account
+- `/reset-password` opened without a valid link explains why and offers to send a new one
+- Shared `AuthCard` component for the small signed-out screens
+- Tested against the live project: short and mismatched passwords rejected; new password saved; old password stops working; new password signs in; request accepted by Supabase
+- NOT tested: the email itself and clicking its link (no way to receive mail in the test environment). Until an email sender is connected in Supabase, reset emails only reach Supabase team addresses. Like magic links, the default link only works in the browser that requested it
 
 <!--INVITE-->
 

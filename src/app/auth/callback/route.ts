@@ -44,6 +44,12 @@ export async function GET(request: NextRequest) {
 
   if (!user) return fail("auth_failed");
 
+  // Password reset links go straight to "choose a new password", with or
+  // without a profile.
+  if (next.startsWith("/reset-password")) {
+    return NextResponse.redirect(`${origin}${next}`);
+  }
+
   const { data: profile, error: profileError } = await supabase
     .from("user_profiles")
     .select("display_name")

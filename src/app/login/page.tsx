@@ -240,12 +240,18 @@ function LoginForm() {
                     {loading ? "Signing in…" : "Sign In"}
                   </button>
 
-                  <div className="flex items-center justify-center">
+                  <div className="flex items-center justify-between">
                     <Link
                       href={`/signup${nextQuery}`}
-                      className="text-sm text-[#4ade80] hover:text-[#6ee7a0] transition-colors"
+                      className="text-sm text-[#4ade80] hover:text-[#6ee7a0] transition-colors py-2"
                     >
                       Create account
+                    </Link>
+                    <Link
+                      href="/forgot-password"
+                      className="text-sm text-[#4d7a5d] hover:text-white/60 transition-colors py-2"
+                    >
+                      Forgot password?
                     </Link>
                   </div>
                 </form>

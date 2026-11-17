@@ -114,6 +114,13 @@ One entry per TODO item, each its own commit.
 - Always off on the live site (Vercel production), even if the variables are set there. Off unless both variables are set. The password stays on the server and is never sent to the browser
 - Verified the switch: on with variables set, 404 in production, 404 with variables unset, and a wrong password shows an error on the sign-in page. The successful sign-in itself was not tested (no real credentials available here)
 
+### P1-4 follow-up: course search failed on the real deployment
+- Found in Justin's preview testing: course search showed "Course search is unavailable right now". Every Overpass server refused or timed out when asked from Vercel. The most likely reason is that the public Overpass servers turn away requests from cloud hosts; this is an inference, the exact responses weren't visible
+- Fix: the browser now asks Overpass directly first (main server, then a mirror, 10s timeout each), the same way the original single-page app did. Our own `/api/overpass` route is now the backup, tried third
+- The route's error now includes what each server answered (`detail`), so the next failure can be diagnosed from the browser console
+- Shared query/parse code moved to `src/lib/overpass.ts`
+- Tested with simulated servers: main works; main down then mirror; both down then our server; everything down gives the readable error; a hung server is abandoned after 10s; failures aren't cached. NOT tested against the real Overpass servers (unreachable from the build sandbox), so this needs one more course search on the preview
+
 ### Not verified end to end
 - No Supabase project was available during this work (the new one isn't set up yet), so sign-in, profile, crew, RSVP and location flows were checked by type-check, lint, production build and reading the code, not by clicking through. Run the checklist in `files/TODO.md` after the Supabase setup
 - P1-5 (invite link) not started; notes are in `files/TODO.md`

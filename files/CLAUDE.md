@@ -115,7 +115,7 @@ Audited 2026-11-16 (P0-1). This repo root IS the Next.js app (there is no `green
 | One crew (tabs: events, members, availability, courses) | `src/app/crews/[id]/` (`page.tsx` loads data, `CrewDetail.tsx` is the screen) |
 | Events, RSVP, bails | `EventCard.tsx`, `CreateEventModal.tsx`, `EditEventModal.tsx` |
 | Availability + heat map | `AvailabilityCalendar.tsx`, `GroupOverlapHeatmap.tsx` |
-| Course search, favorites, Meet in the Middle | `CoursesTab.tsx`, `MeetInTheMiddle.tsx`, `src/lib/geo.ts` |
+| Course search, favorites, Meet in the Middle | `CoursesTab.tsx`, `MeetInTheMiddle.tsx`, `src/lib/geo.ts`, `src/lib/overpass.ts` |
 | Location search box (shared) | `src/components/LocationInput.tsx` |
 | Nominatim / Overpass server proxies | `src/app/api/nominatim/route.ts`, `src/app/api/overpass/route.ts` |
 | Error + success toasts (shared) | `src/components/Toast.tsx`, `src/lib/errors.ts` |
@@ -328,8 +328,8 @@ Members tab shows name, admin badge, home location, and bail count. Cards are bu
 **Guest sign-in currently broken (2026-06-12):**
 "Continue as guest" on /login fails with "Anonymous sign-ins are disabled" — anonymous auth is switched off in the Supabase project settings. Either re-enable it in Supabase (Auth → Providers → Anonymous) or remove the button.
 
-**Overpass API flakiness (addressed 2026-11-16, P1-4):**
-Course search goes through `src/app/api/overpass/route.ts`: 12s timeout per try, then automatic retry on backup servers (overpass-api.de → overpass.kumi.systems → maps.mail.ru), with an identifying User-Agent (the old 406 errors were most likely the missing User-Agent). Results are cached per rounded lat/lng + radius. Not yet confirmed against the live Overpass servers: the build sandbox could not reach any of them, so test course search on the deployed site.
+**Overpass / course search (updated 2026-11-17):**
+Course search asks the public Overpass servers straight from the browser first (overpass-api.de, then overpass.kumi.systems, 10s timeout each), then falls back to our own route `src/app/api/overpass/route.ts`, which retries all servers from Vercel. Browser-first matters: on the first real deployment, every request made from Vercel failed (public Overpass servers appear to refuse cloud hosts). Shared code is in `src/lib/overpass.ts`; the client logic is `fetchGolfCourses` in `src/lib/geo.ts`. Results are cached per rounded lat/lng + radius for the session.
 
 **Member cards bail count bug (fixed):**
 The original implementation fetched `bail_log` by `group_id` on the client, which returned empty rows due to RLS (policy only permits reads filtered by `event_id`). Fixed by passing the already-loaded `bailLog` state from `CrewDetail` directly to `MembersTab` and computing counts from it — no extra query needed.
